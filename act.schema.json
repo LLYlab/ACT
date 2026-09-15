@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://act.dsh/schema/swf-1.0.json",
+  "title": "ACT SWF Declaration v1.0",
+  "x-act-schema-version": "1.0",
+  "x-act-status": "frozen — 11 项默认决策已由用户确认（见 ACT-设计规格.md §17）",
+  "$comment": "ACT 声明格式规格 02 的机器可读版。结构校验用本 schema；语义校验（17 项检查，见 ACT-声明格式规格-02.md §8）由 ACT 校验器实现——尤其是 #4/#15 需要解析 when 表达式，JSON Schema 表达不了。",
+  "type": "object",
+  "required": ["swf"],
+  "additionalProperties": false,
+  "properties": {
+    "swf": { "$ref": "#/$defs/swf" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+
+    "swf": {
+      "type": "object",
+      "required": ["id", "version", "invoke", "amz", "order", "terminal", "ui"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string" },
+        "invoke": { "$ref": "#/$defs/invoke" },
+        "defaults": { "$ref": "#/$defs/defaults" },
+        "amz": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/amzEntry" }
+        },
+        "order": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/edge" }
+        },
+        "terminal": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/id" },
+          "$comment": "检查 #8：每个非终态 AMZ 必须有出边。"
+        },
+        "ui": { "$ref": "#/$defs/ui" },
+        "_capabilitySurface": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capabilityRow" },
+          "$comment": "导出时由校验器生成；导入时供人审（检查 #9）。"
+        }
+      }
+    },
+
+    "invoke": {
+      "type": "object",
+      "required": ["when"],
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "$comment": "给 DIR 的廉价一筛，避免读全部 when。"
+        },
+        "when": {
+          "type": "string",
+          "$comment": "适用条件的自然语言描述，仅供 DIR 判断，不参与机械求值。"
+        },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/arg" }
+        }
+      }
+    },
+
+    "arg": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["text", "refs", "int", "bool"] },
+        "required": { "type": "boolean", "default": false }
+      }
+    },
+
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string" },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "$comment": "SWF 级默认，AMZ 可覆盖（规格 02 §1 的 ②⑤）。"
+    },
+
+    "amzEntry": {
+      "oneOf": [
+        { "$ref": "#/$defs/amzRef" },
+        { "$ref": "#/$defs/amz" }
+      ]
+    },
+
+    "amzRef": {
+      "type": "object",
+      "required": ["$ref"],
+      "additionalProperties": false,
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "pattern": "^amz/[a-z][a-z0-9_]*$"
+        }
+      }
+    },
+
+    "amz": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["ttc", "exp", "pipe", "step"] },
+        "prompt": {
+          "type": "string",
+          "$comment": "固定 SystemPrompt。kind=step 时可省略（由 scp 提供）。"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "$comment": "必须是「能完成任务的最小集」（检查 #1）。编译为 restrict({allow})。"
+        },
+        "guards": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/guard" },
+          "$comment": "可选细粒度拒绝规则，编译为单调 guard()（只能 deny）。"
+        },
+        "model": { "type": "string" },
+        "output": { "$ref": "#/$defs/output" },
+
+        "extends": {
+          "type": "string",
+          "pattern": "^amz/[a-z][a-z0-9_]*$",
+          "$comment": "CSP_AMZ：只允许覆写 prompt。若同时出现 tools/guards/model → 检查 #11 报错。"
+        },
+        "pipe": { "$ref": "#/$defs/pipeSpec" },
+        "step": { "$ref": "#/$defs/stepSpec" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["extends"] },
+          "then": {
+            "required": ["prompt"],
+            "not": {
+              "anyOf": [
+                { "required": ["tools"] },
+                { "required": ["guards"] },
+                { "required": ["model"] }
+              ]
+            }
+          },
+          "else": { "required": ["tools", "output"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "pipe" } }, "required": ["kind"] },
+          "then": { "required": ["pipe"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "step" } }, "required": ["kind"] },
+          "then": { "required": ["step"] }
+        }
+      ]
+    },
+
+    "pipeSpec": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" }
+      },
+      "$comment": "转译器。注意：这是一次真实 LLM 调用，要记账。"
+    },
+
+    "stepSpec": {
+      "type": "object",
+      "required": ["from"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/id",
+          "$comment": "指向某个 AMZ 的完成态（规格 02 §10 默认解 2）。"
+        },
+        "tcp": {
+          "type": "array",
+          "items": { "type": "string" },
+          "$comment": "Tool Change Prompt：工具表变更。"
+        },
+        "scp": {
+          "type": "string",
+          "$comment": "System-prompt Change Prompt。注意：注入 TCP/SCP 会让请求从第 0 位分叉，继承历史吃不到前缀缓存（检查 #10）。"
+        }
+      }
+    },
+
+    "guard": {
+      "type": "object",
+      "required": ["when", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "type": "string",
+          "pattern": "^args\\.",
+          "$comment": "守卫只看调用参数，不看模型输出。"
+        },
+        "reason": { "type": "string" }
+      }
+    },
+
+    "output": {
+      "type": "object",
+      "required": ["body"],
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "enum": ["free", "text", "docx", "xlsx", "pptx", "json"],
+          "$comment": "artifact.type 的值域就是它。声明具体类型可让路由判断降到级 1（规格 02 §5.6）。"
+        },
+        "signal": { "$ref": "#/$defs/signal" }
+      }
+    },
+
+    "signal": {
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "enum": ["bool", "int", "text", "refs"] },
+          "$comment": "检查 #6：所有 when 引用的 signal.X 必须在此声明。"
+        },
+        "encoder": {
+          "enum": ["self", "rule", "weak", "pipe"],
+          "default": "self",
+          "$comment": "级 2/3/4 只是产生 signal 的手段不同；求值器对三者一视同仁。"
+        }
+      }
+    },
+
+    "edge": {
+      "type": "object",
+      "required": ["from", "to", "when", "level"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "when": {
+          "type": "string",
+          "$comment": "文法见规格 02 §5.4。真正的文法校验由 ACT 校验器做，JSON Schema 只做粗筛。"
+        },
+        "level": {
+          "enum": [1, 2, 3, 4],
+          "$comment": "检查 #15：level 1 只能用 artifact./run./args.；level 2-4 只能用 signal.。"
+        },
+        "else": {
+          "$ref": "#/$defs/id",
+          "$comment": "检查 #2：同一 from 的边组必须至少一条带 else（失败策略落点）。"
+        }
+      }
+    },
+
+    "ui": {
+      "type": "object",
+      "required": ["page"],
+      "additionalProperties": false,
+      "properties": {
+        "page": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "AGT" },
+            { "const": "WFW" },
+            { "const": "DIR" },
+            { "const": "WPC" }
+          ],
+          "minItems": 4,
+          "maxItems": 4,
+          "$comment": "固定骨架，SWF 不可自定义（规格 02 §10 默认解 3）。进入 SWF 后 AGT 与此页绑定，此后 stable。"
+        },
+        "panels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "$comment": "可选：声明各视图内挂哪些面板。省略则用全局默认面板组。"
+        },
+        "fallback": {
+          "const": "native",
+          "$comment": "没有合适页面时回退 DSH 原生 UI——与「小型任务零介入」同构。"
+        }
+      }
+    },
+
+    "capabilityRow": {
+      "type": "object",
+      "required": ["amz", "tools", "guards"],
+      "additionalProperties": false,
+      "properties": {
+        "amz": { "$ref": "#/$defs/id" },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "guards": { "type": "array", "items": { "type": "string" } }
+      },
+      "$comment": "安全审查对象就是这张表，不是 prompt（规格 02 §7 / 设计规格 §10）。"
+    }
+  }
+}

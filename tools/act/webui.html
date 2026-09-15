@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ACT</title>
+<style>
+  :root{
+    --bg:#fcfcfd; --panel:#ffffff; --fg:#111318; --fg2:#464b56; --muted:#8b909c;
+    --line:#e7e9ee; --line2:#eff1f5; --soft:#f5f6f9; --soft2:#eceef3;
+    --accent:#4f6bed; --accent2:#7b5cf0; --accent-soft:rgba(79,107,237,.13); --accent-fg:#fff;
+    --danger:#d8453c; --warn:#b7791f; --ok:#1f8a52;
+    --sh-xs:0 1px 1.5px rgba(16,18,22,.05);
+    --sh-sm:0 1px 2px rgba(16,18,22,.05), 0 1px 1px rgba(16,18,22,.03);
+    --sh-md:0 1px 2px rgba(16,18,22,.04), 0 10px 26px -6px rgba(16,18,22,.10);
+    --sh-lg:0 2px 8px rgba(16,18,22,.05), 0 30px 70px -20px rgba(16,18,22,.18);
+    --glow:linear-gradient(180deg, rgba(79,107,237,.052) 0%, rgba(79,107,237,.018) 22%, rgba(79,107,237,0) 46%);
+    --r:12px; --r-lg:16px; --r-sm:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0e1014; --panel:#161920; --fg:#edf0f5; --fg2:#b0b6c2; --muted:#7b8290;
+      --line:#232832; --line2:#1d222a; --soft:#1b1f26; --soft2:#222831;
+      --accent:#8ba4ff; --accent2:#a78bfa; --accent-soft:rgba(139,164,255,.16); --accent-fg:#0c0f16;
+      --danger:#ff8b80; --warn:#e5b567; --ok:#5cc98c;
+      --sh-xs:0 1px 1.5px rgba(0,0,0,.3);
+      --sh-sm:0 1px 2px rgba(0,0,0,.35);
+      --sh-md:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -6px rgba(0,0,0,.5);
+      --sh-lg:0 2px 8px rgba(0,0,0,.45), 0 30px 70px -20px rgba(0,0,0,.7);
+      --glow:linear-gradient(180deg, rgba(139,164,255,.075) 0%, rgba(139,164,255,.026) 22%, rgba(139,164,255,0) 46%);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+       display:flex;flex-direction:column;overflow:hidden;
+       -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  button,input,textarea,select{font:inherit;color:inherit}
+  ::selection{background:var(--accent-soft)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--soft2);border-radius:6px;border:3px solid transparent;
+       background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:content-box}
+
+  header{flex:none;display:flex;align-items:center;gap:16px;padding:0 20px;height:56px;
+         background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:.01em}
+  .brand .mark{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;
+      background:linear-gradient(145deg,var(--accent),var(--accent2));
+      color:#fff;font-size:13px;font-weight:700;box-shadow:var(--sh-sm)}
+  .seg{display:flex;gap:2px;padding:3px;background:var(--soft);border-radius:10px}
+  .seg button{border:0;background:transparent;padding:5px 15px;border-radius:7px;cursor:pointer;
+      color:var(--muted);font-size:13px;font-weight:500;transition:all .16s ease}
+  .seg button.on{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:var(--sh-sm)}
+  .grow{flex:1}
+
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 14px;
+       cursor:pointer;font-size:13px;font-weight:500;box-shadow:var(--sh-xs);
+       transition:background .16s ease,border-color .16s ease,color .16s ease}
+  .btn:hover{background:var(--soft)}
+  .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600;
+       box-shadow:0 1px 2px rgba(16,18,22,.12)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.plain{border-color:transparent;background:transparent;box-shadow:none;color:var(--muted)}
+  .btn.plain:hover{background:var(--soft);color:var(--fg)}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  main{flex:1;display:flex;min-height:0}
+  aside{width:262px;flex:none;background:var(--panel);border-right:1px solid var(--line);
+        display:flex;flex-direction:column;min-height:0}
+  aside .scroll{flex:1;overflow:auto;padding:12px}
+  aside .foot{flex:none;padding:12px;border-top:1px solid var(--line2)}
+  section{flex:1;min-width:0;overflow:auto;background-image:var(--glow);
+       background-repeat:no-repeat;background-size:100% 100%}
+
+  /* 侧栏顶部的主操作（对标「新对话」） */
+  .newbtn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+       padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel);
+       cursor:pointer;font-weight:600;font-size:13.5px;box-shadow:var(--sh-sm);
+       transition:all .16s ease}
+  .newbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);box-shadow:var(--sh-md)}
+  .newbtn .plus{font-size:15px;line-height:1}
+
+  .side-h{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+          color:var(--muted);margin:20px 10px 8px}
+  .row{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:9px;font-size:13.5px;
+       cursor:pointer;margin-bottom:1px;transition:background .14s ease}
+  .row:hover{background:var(--soft)}
+  .row.on{background:var(--accent-soft);font-weight:600;color:var(--accent)}
+  .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .x{opacity:0;border:0;background:none;cursor:pointer;color:var(--muted);
+          padding:0 3px;border-radius:5px;font-size:15px;line-height:1;transition:opacity .14s ease}
+  .row:hover .x{opacity:.75}
+  .row .x:hover{color:var(--danger)}
+  .side-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:22px 12px;line-height:1.8}
+  .side-empty .ic{font-size:20px;opacity:.35;display:block;margin-bottom:6px}
+  .sidefoot{color:var(--muted);font-size:11.5px;text-align:center;line-height:2}
+  .sidefoot a{color:var(--accent);text-decoration:none;cursor:pointer}
+  .sidefoot a:hover{text-decoration:underline}
+
+  /* ── 首页 ── */
+  .hero{min-height:100%;display:flex;flex-direction:column;align-items:center;
+        padding:min(15vh,132px) 28px 64px;text-align:center}
+  .hero .greet{font-size:clamp(23px,2.9vw,33px);font-weight:650;letter-spacing:-.024em;
+        margin:0 0 10px;line-height:1.22}
+  .hero .sub{color:var(--muted);font-size:14px;margin:0 0 30px}
+  .ask{width:min(640px,100%);text-align:left}
+  .ask .box{display:flex;align-items:center;gap:10px;background:var(--panel);
+        border:1px solid var(--line);border-radius:26px;padding:7px 7px 7px 22px;
+        box-shadow:var(--sh-md);transition:border-color .18s ease,box-shadow .18s ease}
+  .ask .box:focus-within{border-color:var(--accent);
+        box-shadow:0 0 0 3px var(--accent-soft),var(--sh-md)}
+  .ask input{flex:1;border:0;background:transparent;outline:none;font-size:15px;padding:11px 0}
+  .ask input::placeholder{color:var(--muted)}
+  .ask .send{width:38px;height:38px;flex:none;border:0;border-radius:50%;cursor:pointer;
+        background:var(--accent);color:var(--accent-fg);font-size:15px;display:grid;place-items:center;
+        transition:filter .16s ease}
+  .ask .send:hover{filter:brightness(1.08)}
+  .ask .send:disabled{opacity:.35;cursor:default;filter:none}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;width:min(640px,100%)}
+  .chip{border:1px solid var(--line);background:var(--panel);color:var(--fg2);
+        border-radius:20px;padding:6px 15px;font-size:12.5px;cursor:pointer;
+        transition:all .16s ease;box-shadow:var(--sh-xs)}
+  .chip:hover{border-color:var(--accent);color:var(--accent);background:var(--soft)}
+
+  /* ── 确认卡 ── */
+  .confirm{width:min(560px,100%);text-align:left;background:var(--panel);border:1px solid var(--line);
+        border-radius:var(--r-lg);padding:26px 28px;box-shadow:var(--sh-lg)}
+  .confirm .lead{font-size:16.5px;font-weight:640;margin:0 0 6px;letter-spacing:-.012em}
+  .confirm .said{color:var(--muted);font-size:13px;margin:0 0 22px;word-break:break-word}
+  .pick{display:flex;align-items:center;gap:13px;background:var(--soft);border-radius:var(--r);
+        padding:14px 16px;margin-bottom:20px}
+  .pick .ic{width:36px;height:36px;flex:none;border-radius:11px;background:var(--panel);
+        display:grid;place-items:center;box-shadow:var(--sh-sm);font-size:15px;color:var(--accent)}
+  .pick .t{flex:1;min-width:0}
+  .pick .t b{display:block;font-weight:620;font-size:13.5px}
+  .pick .t span{color:var(--muted);font-size:12.5px}
+  .confirm .actions{display:flex;gap:10px;align-items:center;margin-top:22px}
+
+  label.f{display:block;margin:16px 0 6px;font-size:11.5px;color:var(--muted);
+        font-weight:650;letter-spacing:.05em;text-transform:uppercase}
+  input[type=text],input[type=password],textarea,select{width:100%;padding:10px 12px;
+        border:1px solid var(--line);border-radius:10px;background:var(--panel);outline:none;
+        transition:border-color .16s ease,box-shadow .16s ease;font-size:13.5px}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{min-height:64px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;resize:vertical}
+
+  /* ── 内容页 ── */
+  .page{max-width:960px;margin:0 auto;padding:34px 36px 72px}
+  .title{font-size:23px;font-weight:650;letter-spacing:-.02em;margin:0 0 5px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px;word-break:break-all}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+        padding:22px 24px;margin-bottom:16px;box-shadow:var(--sh-sm)}
+  .card.flush{padding:0;overflow:hidden}
+  .h2{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+      color:var(--muted);margin:28px 0 10px}
+  .card .h2:first-child{margin-top:0}
+  .hint{color:var(--muted);font-size:13px}
+  .empty{color:var(--muted);text-align:center;padding:90px 20px;line-height:1.9}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;background:var(--soft);
+        color:var(--fg2);font-size:11.5px;margin:0 6px 6px 0}
+  .pill.on{background:var(--accent-soft);color:var(--accent)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  th{color:var(--muted);font-weight:650;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  ul.tree{margin:0;padding:0;list-style:none;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  ul.tree li{padding:2px 0}
+  .edge{color:var(--muted)}
+  .e-err{color:var(--danger)} .e-warn{color:var(--warn)} .e-ok{color:var(--ok)}
+  .note{border-left:3px solid var(--accent);background:var(--soft);padding:11px 15px;
+        border-radius:0 10px 10px 0;font-size:13px}
+  .trace{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+        box-shadow:var(--sh-sm)}
+  .step{display:flex;align-items:baseline;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line2)}
+  .step:last-child{border-bottom:0}
+  .step .id{font-family:ui-monospace,Consolas,monospace;font-weight:600;min-width:150px}
+  .step .st{font-size:12.5px;color:var(--muted)}
+  /* 过程：一行流动的胶囊 */
+  .flow{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;
+        display:flex;flex-wrap:wrap;align-items:center;gap:7px 9px;box-shadow:var(--sh-sm)}
+  .flow .chip{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:600;
+        background:var(--soft);border-radius:7px;padding:4px 10px;white-space:nowrap}
+  .flow .chip.last{background:var(--accent-soft);color:var(--accent)}
+  .flow .arw{color:var(--muted);font-size:12px}
+  .flow .arw.alt{color:var(--warn);font-weight:600}
+  .flow .arw.pause{color:var(--accent);font-weight:600}
+  .flow .arw.end{color:var(--ok)}
+  .out{background:var(--soft);border-radius:10px;padding:16px 18px;white-space:pre-wrap;
+       word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  /* 作业成品：像一张纸，而不是一段日志 */
+  .paper{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+         padding:26px 30px;white-space:pre-wrap;word-break:break-word;line-height:1.75;
+         font-size:14px;box-shadow:var(--sh-sm);max-width:74ch}
+  .ask{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+       border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-sm);margin-bottom:16px}
+  .ask .q{font-size:14.5px;line-height:1.65;margin-bottom:14px}
+  .ask textarea{margin-bottom:10px}
+  .ask-btns{display:flex;gap:9px}
+  .btn.ghost{background:transparent;color:var(--muted)}
+  .btn.ghost:hover{background:var(--soft)}
+  .btn.sm{padding:4px 10px;font-size:12px;border-radius:7px}
+  /* 跑起来之后把表单收掉，让结果顶到眼前 */
+  .foldline{display:none;align-items:center;gap:10px;margin:0 0 16px;font-size:12.5px;color:var(--muted)}
+  .foldline #foldSum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg2)}
+  .card.folded .fields{display:none}
+  .card.folded .foldline{display:flex}
+  .rowline{display:flex;align-items:center;gap:12px}
+  .rowline .btn{flex:none}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--fg);
+        color:var(--bg);padding:10px 20px;border-radius:22px;font-size:13px;box-shadow:var(--sh-lg);
+        opacity:0;pointer-events:none;transition:opacity .2s ease}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="mark">A</span>ACT</div>
+  <div class="seg" id="modes">
+    <button data-mode="user">用户</button>
+    <button data-mode="dev">开发者</button>
+  </div>
+  <span class="grow"></span>
+  <button class="btn plain" id="btnSettings"><span style="opacity:.65">⚙</span> 设置</button>
+</header>
+
+<main>
+  <aside>
+    <div class="scroll" id="side"></div>
+    <div class="foot" id="sideFoot"></div>
+  </aside>
+  <section id="view"></section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+  var S = { mode: 'user', settings: {}, agts: [], index: [], list: null,
+            agt: null, view: null, swfPath: null, panel: null, creating: false, draft: null,
+            // 开发者模式下的「试跑」：主区换成运行表单，侧栏仍然是 SWF 列表（作者要能来回切）
+            devRun: false }
+
+  function esc (v) {
+    return String(v === undefined || v === null ? '' : v)
+      .replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function dash (v) { return esc(v === undefined || v === null || v === '' ? '—' : v) }
+  function toast (m) { var t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(function () { t.classList.remove('on') }, 1900) }
+
+  function api (p, opt) {
+    return fetch(p, Object.assign({ cache: 'no-store' }, opt || {})).then(function (r) {
+      return r.json().catch(function () { return { ok: false, error: 'HTTP ' + r.status } })
+    })
+  }
+  function post (p, body, method) {
+    return api(p, { method: method || 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) })
+  }
+  function dirQ () { return S.settings.dir ? '&dir=' + encodeURIComponent(S.settings.dir) : '' }
+
+  function boot () {
+    return api('/api/settings').then(function (r) {
+      S.settings = (r && r.settings) || {}
+      S.mode = S.settings.mode === 'dev' ? 'dev' : 'user'
+      return Promise.all([refreshList(), refreshAgts(), refreshIndex()])
+    }).then(applyHash).then(paint)
+  }
+
+  // 深链： #dev · #swf=<path> · #agt=<id>
+  // 既方便收藏，也让无头渲染能直接落到某个视图。
+  function applyHash () {
+    var h = String(location.hash || '').replace(/^#/, '')
+    if (!h) return
+    var p = new URLSearchParams(h)
+    var sw = p.get('swf')
+    var ag = p.get('agt')
+
+    // ⚠ 深链要**压过存储的设置**：否则设置里存着 dev，`#agt=` 会落进开发者视图
+    // （实测踩过：`#agt=<id>` 停在空的开发者视图，因为没显式切回用户模式）。
+    if (sw) {
+      S.mode = 'dev'; S.panel = null; S.swfPath = sw
+      return api('/api/view?path=' + encodeURIComponent(sw) + dirQ()).then(function (v) { S.view = v })
+    }
+    if (ag) {
+      S.mode = 'user'; S.panel = null
+      return selectAgt(ag)
+    }
+    if (h === 'dev' || p.has('dev')) S.mode = 'dev'
+  }
+  function refreshList () {
+    return api('/api/list' + (S.settings.dir ? '?dir=' + encodeURIComponent(S.settings.dir) : ''))
+      .then(function (r) { S.list = r || { swfs: [], amz: [] } })
+  }
+  function refreshAgts () { return api('/api/agts').then(function (r) { S.agts = (r && r.agts) || [] }) }
+  function refreshIndex () {
+    return api('/api/index' + (S.settings.dir ? '?dir=' + encodeURIComponent(S.settings.dir) : ''))
+      .then(function (r) { S.index = (r && r.items) || [] })
+  }
+  function saveSettings (patch) {
+    return post('/api/settings', Object.assign({}, S.settings, patch)).then(function (r) {
+      S.settings = (r && r.settings) || S.settings
+      return S.settings
+    })
+  }
+
+  function paint () {
+    var ms = $('#modes').children
+    for (var i = 0; i < ms.length; i++) ms[i].classList.toggle('on', ms[i].getAttribute('data-mode') === S.mode)
+    if (S.panel === 'settings') return paintSettings()
+    if (S.mode === 'dev') return paintDev()
+    paintUser()
+  }
+
+  // ══════════ 用户模式 ══════════
+  function paintUser () {
+    var list = S.agts.length
+      ? S.agts.map(function (a) {
+        return '<div class="row' + (S.agt && S.agt.id === a.id && !S.creating ? ' on' : '') + '" data-agt="' + esc(a.id) + '">'
+          + '<span class="nm">' + esc(a.name) + '</span>'
+          + '<button class="x" data-del="' + esc(a.id) + '" title="删除">×</button></div>'
+      }).join('')
+      : '<div class="side-empty"><span class="ic">◇</span>还没有 AGT<br>下面开始第一个</div>'
+
+    $('#side').innerHTML =
+      '<button class="newbtn" id="btnNew"><span class="plus">＋</span> 新建 AGT</button>'
+      + '<div class="side-h">我的 AGT</div>' + list
+    $('#sideFoot').innerHTML = (S.settings.model && S.settings.model.hasKey)
+      ? '<div class="sidefoot">ACT · 独立运行</div>'
+      : '<div class="sidefoot">未配置模型 API<br><a id="footSet">去设置</a></div>'
+    var fset = $('#footSet')
+    if (fset) fset.onclick = function () { S.panel = 'settings'; paint() }
+    $('#btnNew').onclick = function () { S.creating = true; S.draft = null; S.agt = null; paint() }
+
+    if (!S.creating && S.agt) return paintAgt()
+    paintHero()
+  }
+
+  // ── 首页 ──
+  function paintHero () {
+    var chips = []
+    S.index.forEach(function (it) { it.tags.forEach(function (t) { if (chips.indexOf(t) < 0) chips.push(t) }) })
+
+    if (!S.draft) {
+      $('#view').innerHTML = '<div class="hero">'
+        + '<p class="greet">你需要什么帮助，朋友？</p>'
+        + '<p class="sub">说一句你要做的事，我给你配一个 AGT。</p>'
+        + '<div class="ask"><div class="box">'
+        + '<input type="text" id="askInput" placeholder="例如：把资料整理成一份 Word">'
+        + '<button class="send" id="askGo" title="开始">→</button>'
+        + '</div>'
+        + (chips.length ? '<div class="chips">' + chips.slice(0, 8).map(function (t) {
+          return '<button class="chip" data-chip="' + esc(t) + '">' + esc(t) + '</button>'
+        }).join('') + '</div>' : '')
+        + '</div></div>'
+      var inp = $('#askInput'); inp.focus()
+      inp.onkeydown = function (e) { if (e.key === 'Enter') ask() }
+      $('#askGo').onclick = ask
+      return
+    }
+
+    var b = S.draft.best
+    var lead = b ? (b.tags.length ? b.tags.join(' · ') + ' 类任务' : '这类任务') : '我不太确定这属于哪一类'
+    $('#view').innerHTML = '<div class="hero"><div class="confirm">'
+      + '<p class="lead">' + esc(lead) + '</p>'
+      + '<p class="said">「' + esc(S.draft.text) + '」</p>'
+      + (b
+        ? '<div class="pick"><div class="ic">◆</div><div class="t"><b>' + esc(b.title || b.id || b.name) + '</b>'
+          + '<span>' + esc(b.when || b.name) + '</span></div></div>'
+        : '<div class="note e-warn" style="margin-bottom:20px">按关键词没匹配到合适的流程，你手动选一张 SWF。</div>')
+      + '<label class="f">给它起个名字</label>'
+      + '<input type="text" id="dfName" value="' + esc((b && (b.title || b.id)) || S.draft.text.slice(0, 14)) + '">'
+      + '<label class="f">用哪张 SWF</label>'
+      + '<select id="dfSwf">' + (S.list.swfs || []).map(function (s) {
+          return '<option value="' + esc(s.path) + '"' + (b && s.path === b.path ? ' selected' : '') + '>' + esc(s.name) + '</option>'
+        }).join('') + '</select>'
+      + '<div class="actions"><button class="btn primary" id="dfOk">创建并开始</button>'
+      + '<button class="btn plain" id="dfBack">再想想</button></div>'
+      + '</div></div>'
+    $('#dfName').onkeydown = function (e) { if (e.key === 'Enter') createAgt() }
+    $('#dfOk').onclick = createAgt
+    $('#dfBack').onclick = function () { S.draft = null; paint() }
+  }
+
+  function ask () {
+    var v = $('#askInput').value.trim()
+    if (!v) return
+    var go = $('#askGo'); if (go) go.disabled = true
+    api('/api/match?q=' + encodeURIComponent(v) + dirQ()).then(function (r) {
+      S.draft = { text: v, best: (r && r.best) || null }
+      paint()
+    })
+  }
+
+  function createAgt () {
+    var name = $('#dfName').value.trim(), swf = $('#dfSwf').value
+    if (!name || !swf) { toast('名字和 SWF 都要有'); return }
+    post('/api/agts', { name: name, swf: swf, purpose: S.draft ? S.draft.text : '' }).then(function (r) {
+      if (!r.ok) { toast(r.error || '创建失败'); return }
+      S.draft = null; S.creating = false
+      return refreshAgts().then(function () { selectAgt(r.agt.id) })
+    })
+  }
+
+  // ── 选中的 AGT ──
+  function paintAgt () {
+    var a = S.agt, swf = (S.view && S.view.swf) || {}, inv = swf.invoke || {}
+    var argsDef = Array.isArray(inv.args) ? inv.args : []
+    var h = '<div class="page">'
+    h += '<p class="title">' + esc(a.name) + '</p>'
+    // 试跑是从开发者视图进来的，得有条路回去（否则作者只能靠重新点左侧的 SWF）
+    if (S.mode === 'dev' && S.devRun) {
+      h += '<div class="rowline" style="margin:2px 0 10px"><button class="btn ghost sm" id="btnBackDev">← 返回校验视图</button>'
+        + '<span class="hint">试跑不会改动声明；改完点左侧 SWF 名字刷新</span></div>'
+    }
+    h += '<p class="sub">' + (swf.title ? esc(swf.title) + ' · ' : '') + esc(inv.when || a.purpose || '') + '</p>'
+    if (Array.isArray(inv.tags) && inv.tags.length) h += inv.tags.map(function (t) { return '<span class="pill">' + esc(t) + '</span>' }).join('')
+    if (S.view && S.view.errors && S.view.errors.length) {
+      h += '<div class="note e-err" style="margin-top:14px">这张 SWF 有 ' + S.view.errors.length + ' 个校验错误，可能跑不通。</div>'
+    }
+    h += '<div class="card" id="runCard" style="margin-top:20px"><div class="h2" style="margin-top:0">做什么</div>'
+    // 跑起来之后表单要收起来。否则每跑一次，成品都被压在四个输入框下面，
+    // 得往下滚才看得见——用户要的是**结果**，不是这张表。
+    h += '<div class="foldline">跑的是：<span id="foldSum"></span>'
+      + '<button class="btn ghost sm" id="btnFold">改</button></div>'
+    h += '<div class="fields">'
+    // ⚠ 诉求**永远**要有。以前是「有 args 就不给诉求框」——可真实流程往往两样都要：
+    // 用户既要说清要干什么，又要指个文件。那个二选一让「把老师这段话贴进来」没地方贴。
+    h += '<label class="f">诉求</label><input type="text" data-arg="__goal" placeholder="用一句话说清，或直接把他发的那段贴进来">'
+    if (argsDef.length) {
+      argsDef.forEach(function (d) {
+        // 占位符给人看的提示，不是把类型名原样丢出来
+        var hint = d.type === 'refs' ? '资料标号，如 1,2'
+          : d.type === 'int' ? '数字'
+          : d.type === 'bool' ? 'true / false'
+          : '填写 ' + d.name
+        h += '<label class="f">' + esc(d.name) + (d.required ? ' *' : '') + '</label>'
+        h += '<input type="text" data-arg="' + esc(d.name) + '" placeholder="' + esc(hint) + '">'
+      })
+    }
+    // echo 后端下可以喂样例正文。目的是**不花额度**就能看真实版式的成品长什么样、
+    // 暂停与分支对不对。这不是模拟执行——走的是同一个执行器和同一套渲染，
+    // 只是把「模型会产出什么」这一步先钉死。换成真后端它就不出现了。
+    if (S.settings.backend === 'echo') {
+      h += '<label class="f" style="margin-top:16px">样例输出（仅 echo 干跑用）</label>'
+      h += '<textarea id="demoOut" rows="2" placeholder=\'{"show_result":"成品正文…"} —— 按 AMZ id 覆盖 echo 的正文\'></textarea>'
+    }
+    h += '</div>'
+    h += '<div class="rowline" style="margin-top:20px"><button class="btn primary" id="btnRun">开始</button>'
+      + '<span class="hint" id="runMsg"></span></div>'
+    h += '</div>'
+    h += '<div id="runBox"></div>'
+    $('#view').innerHTML = h
+    // ⚠ 必须包一层。直接 `= runAgt` 的话，点击事件会当成第一个参数传进去，
+    // 于是 startAt 变成一个 PointerEvent —— 执行器报「节点不存在：[object PointerEvent]」。
+    $('#btnRun').onclick = function () { runAgt() }
+    $('#btnFold').onclick = function () { $('#runCard').classList.remove('folded'); $('input[data-arg=__goal]').focus() }
+    var backDev = $('#btnBackDev')
+    if (backDev) backDev.onclick = function () { S.devRun = false; S.agt = null; paint() }
+  }
+
+  function collectArgs () {
+    var inputs = document.querySelectorAll('#view [data-arg]'), args = {}
+    for (var i = 0; i < inputs.length; i++) {
+      var k = inputs[i].getAttribute('data-arg'), v = inputs[i].value.trim()
+      if (k === '__goal') { if (v) args.goal = v } else if (v) args[k] = v
+    }
+    return args
+  }
+
+  // 表单收起来，并在标题行留一句「跑的是：…」——既让结果露出头，又不会让人忘了输入的是什么
+  function foldCard (args) {
+    var card = $('#runCard'), sum = $('#foldSum')
+    if (!card) return
+    card.classList.add('folded')
+    if (sum) {
+      var bits = []
+      if (args.goal) bits.push(args.goal)
+      if (args.pdf) bits.push(args.pdf)
+      sum.textContent = bits.length ? bits.join('　·　') : '(未填诉求)'
+    }
+  }
+
+  function runAgt (startAt, confirmText) {
+    var args = S.runArgs || collectArgs()
+    S.runArgs = args
+    var btn = $('#btnRun'), msg = $('#runMsg')
+    var useHttp = S.settings.backend === 'http'
+    if (!startAt && useHttp && !confirm('当前后端是 http —— 会真实调用模型并消耗额度。继续？')) return
+    foldCard(args)
+    if (btn) btn.disabled = true
+    if (msg) msg.textContent = startAt ? '继续…' : (useHttp ? '调用模型中…' : '进行中…')
+    var url = '/api/run?path=' + encodeURIComponent(S.agt.swf) + '&args=' + encodeURIComponent(JSON.stringify(args))
+      + dirQ() + (useHttp ? '&backend=http' : '')
+    if (startAt) url += '&startAt=' + encodeURIComponent(startAt)
+    if (confirmText !== undefined) url += '&confirm=' + encodeURIComponent(confirmText)
+    var dbg = $('#demoOut')
+    if (dbg && dbg.value.trim()) {
+      try { url += '&outputs=' + encodeURIComponent(JSON.stringify(JSON.parse(dbg.value))) } catch (e) { /* 不是 JSON 就当没填 */ }
+    }
+    api(url)
+      .then(function (r) {
+        if (btn) btn.disabled = false
+        if (msg) msg.textContent = ''
+        if (!r.trace) { $('#runBox').innerHTML = '<div class="e-err">' + esc(r.error || '失败') + '</div>'; return }
+        if (r.paused) paintPause(r)
+        else paintResult(r)
+        var box = $('#runBox')
+        if (box && box.scrollIntoView) box.scrollIntoView({ block: 'nearest' })
+      }).catch(function (e) {
+        if (btn) btn.disabled = false
+        if (msg) msg.innerHTML = '<span class="e-err">' + esc(e) + '</span>'
+      })
+  }
+
+  // 暂停：先把「我理解成了什么」摆给用户看，再问，再拿答复从此处接着跑
+  function paintPause (r) {
+    var h = '<div class="h2">需要你确认</div>'
+    if (r.finalOutput) h += '<div class="paper">' + esc(r.finalOutput) + '</div>'
+    h += '<div class="ask"><div class="q">' + esc(r.pause.question) + '</div>'
+    h += '<textarea id="aText" rows="3" placeholder="直接回复，或粘贴作业内容…"></textarea>'
+    h += '<div class="ask-btns"><button class="btn" id="btnGo">确认，继续</button>'
+    h += '<button class="btn ghost" id="btnBack">改一下开头</button></div></div>'
+    h += traceHtml(r)
+    $('#runBox').innerHTML = h
+    $('#btnGo').onclick = function () {
+      var t = $('#aText').value.trim()
+      if (!t) { $('#aText').focus(); return }
+      runAgt(r.pause.next, t)
+    }
+    $('#btnBack').onclick = function () { S.runArgs = null; $('input[data-arg=__goal]').focus(); runAgt() }
+  }
+
+  // 过程画成一行流动的胶囊，而不是每步一行的清单：
+  // 十一步就是十一行，太占地。走 else 的边用颜色标出来——那才是要注意的地方。
+  function traceHtml (r) {
+    var out = []
+    for (var i = 0; i < r.trace.length; i++) {
+      var s = r.trace[i]
+      out.push('<span class="chip' + (i === r.trace.length - 1 ? ' last' : '') + '">' + esc(s.amz) + '</span>')
+      if (s.via === 'pause') out.push('<span class="arw pause">⏸ 等你确认</span>')
+      else if (s.to) out.push('<span class="arw' + (s.via && s.via.indexOf('else') === 0 ? ' alt' : '') + '">'
+        + (s.via && s.via.indexOf('else') === 0 ? '→ else →' : '→') + '</span>')
+      else out.push('<span class="arw end">✓</span>')
+    }
+    return '<div class="h2">过程</div><div class="flow">' + out.join('') + '</div>'
+  }
+
+  function paintResult (r) {
+    var h = '<div class="h2">结果</div>'
+    h += r.ok ? '<div class="e-ok" style="margin-bottom:12px">完成 · ' + r.steps + ' 步</div>'
+              : '<div class="e-err" style="margin-bottom:12px">' + esc(r.status) + esc(r.reason ? ' — ' + r.reason : '') + '</div>'
+    if (r.finalOutput) h += '<div class="paper">' + esc(r.finalOutput) + '</div>'
+    h += traceHtml(r)
+    $('#runBox').innerHTML = h
+  }
+
+  function selectAgt (id) {
+    var a = null
+    for (var i = 0; i < S.agts.length; i++) if (S.agts[i].id === id) a = S.agts[i]
+    S.agt = a; S.creating = false; S.panel = null
+    if (!a) { paint(); return }
+    return api('/api/view?path=' + encodeURIComponent(a.swf) + dirQ())
+      .then(function (v) { S.view = v; paint() })
+  }
+
+  // ══════════ 开发者模式 ══════════
+  function paintDev () {
+    var l = S.list || { swfs: [], amz: [] }
+    $('#side').innerHTML = '<div class="side-h" style="margin-top:6px">SWF</div>'
+      + ((l.swfs && l.swfs.length)
+        ? l.swfs.map(function (s) {
+          return '<div class="row' + (S.swfPath === s.path ? ' on' : '') + '" data-swf="' + esc(s.path) + '"><span class="nm">' + esc(s.name) + '</span></div>'
+        }).join('')
+        : '<div class="side-empty">没有 .swf.json</div>')
+      + '<div class="side-h">AMZ 库</div>'
+      + ((l.amz && l.amz.length)
+        ? l.amz.map(function (a) { return '<div class="side-empty" style="padding:3px 11px;text-align:left">' + esc(a.name) + '</div>' }).join('')
+        : '<div class="side-empty" style="padding:3px 11px;text-align:left">—</div>')
+    $('#sideFoot').innerHTML = '<button class="btn" id="btnRe" style="width:100%">重新读取</button>'
+    $('#btnRe').onclick = function () { refreshList().then(paint) }
+    if (!S.view || !S.swfPath) {
+      $('#view').innerHTML = '<div class="empty"><div style="font-size:15px;font-weight:650;color:var(--fg);margin-bottom:8px">开发者视图</div>'
+        + '校验 · 调用顺序图 · AMZ 有效值 · 能力表面<br><span style="font-size:12.5px">从左侧选一张 SWF</span></div>'
+      return
+    }
+    // 试跑：作者改完声明要能**立刻**跑一次，不该被逼着先建一个 AGT 才能验。
+    // 这里复用用户模式那套运行表单——同一份实现，不另写一份。
+    if (S.devRun) {
+      S.agt = {
+        id: '__dev__',
+        name: dash((S.view.swf && S.view.swf.id) || 'SWF'),
+        swf: S.swfPath,
+        purpose: ((S.view.swf && S.view.swf.invoke) || {}).when || '',
+      }
+      paintAgt()
+      return
+    }
+    renderDev()
+  }
+
+  function renderDev () {
+    var r = S.view, swf = r.swf || {}
+    var amz = Array.isArray(swf.amz) ? swf.amz : []
+    var surface = Array.isArray(r.surface) ? r.surface : []
+    var ui = swf.ui || {}, inv = swf.invoke || {}
+    var errs = r.errors || [], warns = r.warnings || []
+    var h = '<div class="page">'
+    h += '<p class="title">SWF ' + dash(swf.id) + '</p>'
+    h += '<p class="sub">' + esc(r.path) + '</p>'
+    h += '<div><span class="pill">v' + dash(swf.version) + '</span><span class="pill">AMZ ' + amz.length + '</span>'
+      + '<span class="pill">边 ' + (Array.isArray(swf.order) ? swf.order.length : 0) + '</span>'
+      + '<span class="pill">' + (Array.isArray(inv.tags) ? esc(inv.tags.join(' / ')) : '无标签') + '</span></div>'
+    h += '<div class="rowline" style="margin-top:16px"><button class="btn" id="btnTryRun">试跑这张 SWF</button>'
+      + '<span class="hint">' + (errs.length ? '有 ' + errs.length + ' 个错误，可能跑不通' : '用同一套运行表单，不另建 AGT') + '</span></div>'
+
+    h += '<div class="h2">校验</div>'
+    if (!errs.length && !warns.length) h += '<div class="e-ok">通过（0 错误 / 0 警告）</div>'
+    else {
+      if (errs.length) h += errs.map(function (e) {
+        return '<div class="mono e-err" style="margin-bottom:6px">✗ ' + esc(e.code) + '  ' + esc(e.path) + '<br><span style="padding-left:16px">' + esc(e.message) + '</span></div>'
+      }).join('')
+      if (warns.length) h += warns.map(function (w) {
+        return '<div class="mono e-warn" style="margin-bottom:6px">! ' + esc(w.code) + '  ' + esc(w.path) + '<br><span style="padding-left:16px">' + esc(w.message) + '</span></div>'
+      }).join('')
+    }
+
+    h += '<div class="h2">调用顺序</div><div class="card">' + tree(swf) + '</div>'
+
+    h += '<div class="h2">AMZ（有效值：defaults 已应用，$ref 已解析）</div><div class="card flush">'
+    h += '<table><thead><tr><th>id</th><th>kind</th><th>tools</th><th>model</th><th>body</th><th>signal</th></tr></thead><tbody>'
+    h += amz.map(function (a) {
+      if (!a || typeof a !== 'object') return '<tr><td colspan="6" class="e-err">非法项</td></tr>'
+      if (typeof a.$ref === 'string') return '<tr><td class="mono">' + esc(a.$ref) + '</td><td colspan="5" class="hint">引用自 AMZ 库（未解析）</td></tr>'
+      var o = a.output || {}, sig = (o.signal && o.signal.fields) ? o.signal.fields : null
+      return '<tr><td class="mono">' + esc(a.id) + '</td><td>' + dash(a.kind) + '</td><td class="mono">'
+        + ((Array.isArray(a.tools) ? a.tools : []).join(', ') || '—') + '</td><td class="mono">' + dash(a.model) + '</td><td>' + dash(o.body)
+        + '</td><td class="mono">' + (sig ? esc(Object.keys(sig).map(function (k) { return k + ':' + sig[k] }).join(' ')) : '—') + '</td></tr>'
+    }).join('')
+    h += '</tbody></table></div>'
+
+    h += '<div class="h2">能力表面（审查对象）</div><div class="card flush">'
+    h += '<table><thead><tr><th>AMZ</th><th>tools</th><th>guards</th></tr></thead><tbody>'
+    h += surface.map(function (s) {
+      return '<tr><td class="mono">' + esc(s.amz) + '</td><td class="mono">' + ((s.tools || []).join(', ') || '—')
+        + '</td><td class="mono">' + ((s.guards || []).join(' | ') || '—') + '</td></tr>'
+    }).join('')
+    h += '</tbody></table></div>'
+
+    h += '<div class="h2">UI</div><div class="mono hint">page=[' + (Array.isArray(ui.page) ? esc(ui.page.join(', ')) : '') + ']  fallback=' + dash(ui.fallback) + '</div>'
+    if (r.surfaceHash) h += '<div class="h2">审查凭据</div><div class="mono hint">' + esc(r.surfaceHash) + '</div>'
+    h += '</div>'
+    $('#view').innerHTML = h
+    var tryRun = $('#btnTryRun')
+    if (tryRun) tryRun.onclick = function () { S.devRun = true; paint() }
+  }
+
+  function tree (swf) {
+    var order = Array.isArray(swf.order) ? swf.order : []
+    var adj = {}, targets = {}, froms = []
+    order.forEach(function (e) {
+      if (!e) return
+      if (!adj[e.from]) { adj[e.from] = []; froms.push(e.from) }
+      adj[e.from].push(e)
+      targets[e.to] = 1
+      if (e.else !== undefined) targets[e.else] = 1
+    })
+    if (!froms.length) return '<div class="hint">这张 SWF 没有边。</div>'
+    var terminal = Array.isArray(swf.terminal) ? swf.terminal : []
+    var entries = froms.filter(function (n) { return !targets[n] })
+    var seen = {}, rows = []
+    function walk (n, d) {
+      if (seen[n]) { rows.push([d, n + '  (已出现过)', 0]); return }
+      seen[n] = 1
+      rows.push([d, n + (terminal.indexOf(n) >= 0 ? '  ■ 终态' : ''), 0])
+      ;(adj[n] || []).forEach(function (e) {
+        var c = (e.when === undefined ? '?' : e.when) + '  (level ' + (e.level === undefined ? '?' : e.level) + ')'
+        rows.push([d + 1, '[' + c + '] → ' + e.to, 1])
+        if (e.else !== undefined) rows.push([d + 1, '[else] → ' + e.else, 1])
+      })
+      ;(adj[n] || []).forEach(function (e) {
+        if (!seen[e.to]) walk(e.to, d + 2)
+        if (e.else !== undefined && !seen[e.else]) walk(e.else, d + 2)
+      })
+    }
+    if (entries.length === 1) walk(entries[0], 0)
+    else froms.forEach(function (n) { if (!seen[n]) walk(n, 0) })
+    return '<ul class="tree">' + rows.map(function (r) {
+      return '<li class="' + (r[2] ? 'edge' : '') + '" style="padding-left:' + (r[0] * 16) + 'px">' + esc(r[1]) + '</li>'
+    }).join('') + '</ul>'
+  }
+
+  // ══════════ 设置 ══════════
+  function paintSettings () {
+    $('#side').innerHTML = '<div class="side-h" style="margin-top:6px">设置</div><div class="row on"><span class="nm">常规</span></div>'
+    $('#sideFoot').innerHTML = '<button class="btn" id="btnBack" style="width:100%">返回</button>'
+    $('#btnBack').onclick = function () { S.panel = null; paint() }
+    var s = S.settings, m = s.model || {}
+    $('#view').innerHTML = '<div class="page">'
+      + '<p class="title">设置</p><p class="sub">ACT 独立运行；这些设置存在 ACT 根目录的 settings.json。</p>'
+
+      + '<div class="card"><div class="h2" style="margin-top:0">模型 API</div>'
+      + '<div class="hint" style="margin-bottom:16px">这里配的是<b>接口与凭据</b>。'
+      + '<b>具体调哪个模型由 SWF 决定</b>——每张 SWF 的每个 AMZ 各自声明 <span class="mono">model</span>。</div>'
+      + '<label class="f">Base URL</label>'
+      + '<input type="text" id="mBase" value="' + esc(m.baseUrl || '') + '" placeholder="https://api.deepseek.com">'
+      + '<label class="f">API Key</label>'
+      + '<input type="password" id="mKey" placeholder="' + (m.hasKey ? esc(m.keyPreview) + '（已保存，留空则不改）' : 'sk-…') + '">'
+      + '<label class="f">可用模型（每行一个，可选）</label>'
+      + '<textarea id="mModels" placeholder="deepseek-v4-pro&#10;deepseek-v4-flash">' + esc((m.models || []).join('\n')) + '</textarea>'
+      + '<div class="hint" style="margin-top:10px">用于标识与提醒：AMZ 声明的 model 不在这个列表里时，界面会标出来。</div>'
+      + '<div class="rowline" style="margin-top:18px"><button class="btn primary" id="mSave">保存</button>'
+      + (m.hasKey ? '<button class="btn plain" id="mClear">清除 Key</button>' : '')
+      + '<span class="hint" id="mMsg"></span></div>'
+      + '<div class="hint" style="margin-top:14px">⚠ Key 明文存在 <span class="mono">settings.json</span>。'
+      + '它<b>不会回传到浏览器</b>（这里只显示尾部预览）。共享机器上建议改用环境变量 '
+      + '<span class="mono">DEEPSEEK_API_KEY</span>，并在这里留空。</div></div>'
+
+      + '<div class="card"><div class="h2" style="margin-top:0">执行后端</div>'
+      + '<div class="hint" style="margin-bottom:12px"><b>echo</b> 是确定性后端，<b>不产生任何模型花费</b>；'
+      + '<b>http</b> 会真实调用模型（花钱，且<b>调哪个模型由 SWF 决定</b>）。</div>'
+      + '<div class="seg" id="setBackend" style="width:max-content">'
+      + '<button data-be="echo"' + (s.backend !== 'http' ? ' class="on"' : '') + '>echo · 不花钱</button>'
+      + '<button data-be="http"' + (s.backend === 'http' ? ' class="on"' : '') + '>http · 真调用</button></div>'
+      + (s.backend === 'http' && !(s.model && s.model.hasKey)
+          ? '<div class="note e-warn" style="margin-top:14px">选了 http 但还没配 API Key，运行会被拒绝。</div>' : '')
+      + '</div>'
+
+      + '<div class="card"><div class="h2" style="margin-top:0">默认模式</div>'
+      + '<div class="hint" style="margin-bottom:12px">用户模式只显示 AGT；开发者模式显示 SWF、图与能力表面。</div>'
+      + '<div class="seg" id="setMode" style="width:max-content"><button data-mode="user"' + (s.mode !== 'dev' ? ' class="on"' : '') + '>用户</button>'
+      + '<button data-mode="dev"' + (s.mode === 'dev' ? ' class="on"' : '') + '>开发者</button></div></div>'
+
+      + '<div class="card"><div class="h2" style="margin-top:0">SWF 目录</div>'
+      + '<input type="text" id="setDir" value="' + esc(s.dir || '') + '" placeholder="' + esc((S.list && S.list.dir) || '') + '">'
+      + '<div class="rowline" style="margin-top:16px"><button class="btn primary" id="setSave">保存</button>'
+      + '<span class="hint" id="setMsg"></span></div></div>'
+      + '</div>'
+
+    $('#mSave').onclick = function () {
+      var patch = {
+        baseUrl: $('#mBase').value.trim(),
+        models: $('#mModels').value.split('\n').map(function (x) { return x.trim() }).filter(Boolean),
+      }
+      var k = $('#mKey').value.trim()
+      if (k) patch.apiKey = k
+      saveSettings({ model: patch }).then(function () {
+        $('#mMsg').textContent = '已保存'
+        $('#mKey').value = ''
+        paintSettings()
+      })
+    }
+    $('#setMode').onclick = function (ev) {
+      var b = ev.target.closest('button'); if (!b) return
+      saveSettings({ mode: b.getAttribute('data-mode') }).then(paintSettings)
+    }
+    var sb = $('#setBackend')
+    if (sb) sb.onclick = function (ev) {
+      var b = ev.target.closest('button'); if (!b) return
+      var be = b.getAttribute('data-be')
+      if (be === 'http' && !(S.settings.model && S.settings.model.hasKey)) {
+        if (!confirm('还没配 API Key，http 后端会跑不起来。仍要切换吗？')) return
+      }
+      saveSettings({ backend: be }).then(paintSettings)
+    }
+    var mc = $('#mClear')
+    if (mc) mc.onclick = function () {
+      if (!confirm('清除已保存的 API Key？')) return
+      saveSettings({ model: { apiKey: null } }).then(paintSettings)
+    }
+    $('#setSave').onclick = function () {
+      saveSettings({ dir: $('#setDir').value.trim() }).then(function () {
+        $('#setMsg').textContent = '已保存'
+        return Promise.all([refreshList(), refreshIndex()]).then(paint)
+      })
+    }
+  }
+
+  // ══════════ 事件 ══════════
+  document.addEventListener('click', function (ev) {
+    var t = ev.target
+    var chip = t.closest && t.closest('[data-chip]')
+    if (chip) { var i = $('#askInput'); if (i) { i.value = chip.getAttribute('data-chip'); ask() } return }
+
+    var mb = t.closest && t.closest('#modes button')
+    if (mb) { S.mode = mb.getAttribute('data-mode'); S.panel = null; S.creating = false; S.devRun = false; saveSettings({ mode: S.mode }); paint(); return }
+
+    var del = t.closest && t.closest('[data-del]')
+    if (del) {
+      ev.stopPropagation()
+      var id = del.getAttribute('data-del')
+      if (confirm('删除这个 AGT？')) {
+        post('/api/agts?id=' + encodeURIComponent(id), {}, 'DELETE').then(function () {
+          if (S.agt && S.agt.id === id) { S.agt = null; S.view = null }
+          return refreshAgts().then(paint)
+        })
+      }
+      return
+    }
+
+    var ag = t.closest && t.closest('[data-agt]')
+    if (ag) { selectAgt(ag.getAttribute('data-agt')); return }
+
+    var sw = t.closest && t.closest('[data-swf]')
+    if (sw) {
+      S.swfPath = sw.getAttribute('data-swf')
+      S.devRun = false // 换一张 SWF 就回到校验视图，别停在上一张的试跑结果上
+      api('/api/view?path=' + encodeURIComponent(S.swfPath) + dirQ()).then(function (v) { S.view = v; paint() })
+    }
+  })
+
+  $('#btnSettings').onclick = function () { S.panel = S.panel === 'settings' ? null : 'settings'; paint() }
+
+  boot()
+})()
+</script>
+</body>
+</html>

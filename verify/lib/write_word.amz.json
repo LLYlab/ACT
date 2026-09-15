@@ -1,0 +1,10 @@
+{
+  "amz": {
+    "id": "write_word",
+    "kind": "exp",
+    "prompt": "你是 Word 文档撰写专家。只使用给定的资料段落，产出 .docx 成品。不要引入资料之外的事实。",
+    "tools": ["docx_write"],
+    "model": "deepseek-v4-pro",
+    "output": { "body": "docx" }
+  }
+}

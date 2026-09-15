@@ -1,0 +1,84 @@
+{
+  "swf": "write_doc",
+  "backend": "echo",
+  "args": {
+    "goal": "写一份设计说明"
+  },
+  "ok": true,
+  "status": "completed",
+  "reason": null,
+  "steps": [
+    {
+      "seq": 0,
+      "amz": "plan_outline",
+      "status": "ok",
+      "input": {
+        "req": {
+          "goal": "写一份设计说明"
+        },
+        "refs": []
+      },
+      "output": "[free] plan_outline",
+      "signal": {
+        "need_docx": true,
+        "outline_points": 1
+      },
+      "env": {
+        "signal": {
+          "need_docx": true,
+          "outline_points": 1
+        },
+        "artifact": {
+          "type": "free",
+          "count": 1,
+          "refs": []
+        },
+        "run": {
+          "status": "ok"
+        },
+        "args": {
+          "goal": "写一份设计说明"
+        }
+      },
+      "to": "write_word",
+      "via": "when",
+      "expr": "signal.need_docx == true",
+      "meta": {
+        "backend": "echo",
+        "model": "deepseek-v4-pro"
+      }
+    },
+    {
+      "seq": 1,
+      "amz": "write_word",
+      "status": "ok",
+      "input": {
+        "req": {
+          "goal": "写一份设计说明"
+        },
+        "refs": [],
+        "prev": "[free] plan_outline"
+      },
+      "output": "[docx] write_word",
+      "signal": {},
+      "env": {
+        "signal": {},
+        "artifact": {
+          "type": "docx",
+          "count": 1,
+          "refs": []
+        },
+        "run": {
+          "status": "ok"
+        },
+        "args": {
+          "goal": "写一份设计说明"
+        }
+      },
+      "meta": {
+        "backend": "echo",
+        "model": "deepseek-v4-flash"
+      }
+    }
+  ]
+}

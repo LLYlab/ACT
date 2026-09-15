@@ -1,0 +1,60 @@
+{
+  "swf": {
+    "id": "write_doc",
+    "version": 1,
+    "title": "写文档",
+    "invoke": {
+      "tags": ["办公", "写作"],
+      "when": "需要产出一份文档成品时",
+      "args": [
+        { "name": "goal", "type": "text", "required": true },
+        { "name": "refs", "type": "refs", "required": false }
+      ]
+    },
+    "defaults": { "model": "deepseek-v4-flash" },
+    "amz": [
+      {
+        "id": "plan_outline",
+        "kind": "exp",
+        "prompt": "你是文档规划专家。依据诉求与给定资料，产出提纲与要点清单。不要产出正文。",
+        "tools": [],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": { "need_docx": "bool", "outline_points": "int" },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "write_word",
+        "kind": "exp",
+        "prompt": "你是 Word 文档撰写专家。只使用给定的资料段落，产出 .docx 成品。不要引入资料之外的事实。",
+        "tools": ["docx_write"],
+        "output": { "body": "docx" }
+      },
+      {
+        "id": "write_plain",
+        "kind": "exp",
+        "prompt": "你是文档撰写专家。只使用给定的资料段落，产出纯文本草稿。",
+        "tools": [],
+        "output": { "body": "text" }
+      }
+    ],
+    "order": [
+      {
+        "from": "plan_outline",
+        "to": "write_word",
+        "when": "signal.need_docx == true",
+        "level": 2,
+        "else": "write_plain"
+      }
+    ],
+    "terminal": ["write_word", "write_plain"],
+    "ui": {
+      "page": ["AGT", "WFW", "DIR", "WPC"],
+      "fallback": "native"
+    }
+  }
+}

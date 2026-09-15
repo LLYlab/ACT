@@ -1,0 +1,18 @@
+# 本地运行状态 —— 不该进仓库
+settings.json
+agts.json
+
+# 中间产物与草稿（截图另存 docs/screenshots/）
+_shot/
+
+# 本机材料：给别处写的报告、临时分析、任何不该公开的东西
+# （约定：这类文件一律放这两个地方，别散在 docs/ 里）
+_internal/
+local/
+
+# 依赖与系统杂项
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
