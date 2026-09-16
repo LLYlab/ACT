@@ -77,15 +77,6 @@
     "terminal": [
       "write_word",
       "write_plain"
-    ],
-    "ui": {
-      "page": [
-        "AGT",
-        "WFW",
-        "DIR",
-        "WPC"
-      ],
-      "fallback": "native"
-    }
+    ]
   }
 }

@@ -1,65 +1,106 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://llmr.dsh/schema/swf-1.0.json",
-  "title": "LLMR SWF Declaration v1.0",
-  "x-llmr-schema-version": "1.0",
-  "x-llmr-status": "frozen — 11 项默认决策已由用户确认（见 LLMR-设计规格.md §17）",
-  "$comment": "LLMR 声明格式规格 02 的机器可读版。结构校验用本 schema；语义校验（17 项检查，见 LLMR-声明格式规格-02.md §8）由 LLMR 校验器实现——尤其是 #4/#15 需要解析 when 表达式，JSON Schema 表达不了。",
+  "$id": "https://llmr.dsh/schema/swf-1.1.json",
+  "title": "LLMR SWF Declaration v1.1",
+  "x-llmr-schema-version": "1.1",
+  "x-llmr-status": "v1.1 — 决策 #10 重写（ui.page 冻结骨架 → ui.screens + SWF 自带 HTML）；环允许进环控区（pool）；见 LLMR-设计规格.md §17",
+  "$comment": "LLMR 声明格式规格 02 的机器可读版。结构校验用本 schema；语义校验（19 项检查，见 LLMR-校验器规格.md §3）由 LLMR 校验器实现——尤其是 #4/#15 需要解析 when 表达式，JSON Schema 表达不了。",
   "type": "object",
-  "required": ["swf"],
+  "required": [
+    "swf"
+  ],
   "additionalProperties": false,
   "properties": {
-    "swf": { "$ref": "#/$defs/swf" }
+    "swf": {
+      "$ref": "#/$defs/swf"
+    }
   },
   "$defs": {
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
-
     "swf": {
       "type": "object",
-      "required": ["id", "version", "invoke", "amz", "order", "terminal", "ui"],
+      "required": [
+        "id",
+        "version",
+        "invoke",
+        "amz",
+        "order",
+        "terminal"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "version": { "type": "integer", "minimum": 1 },
-        "title": { "type": "string" },
-        "invoke": { "$ref": "#/$defs/invoke" },
-        "defaults": { "$ref": "#/$defs/defaults" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "invoke": {
+          "$ref": "#/$defs/invoke"
+        },
+        "defaults": {
+          "$ref": "#/$defs/defaults"
+        },
         "amz": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/amzEntry" }
+          "items": {
+            "$ref": "#/$defs/amzEntry"
+          }
         },
         "order": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/edge" }
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
         },
         "terminal": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/id" },
+          "items": {
+            "$ref": "#/$defs/id"
+          },
           "$comment": "检查 #8：每个非终态 AMZ 必须有出边。"
         },
-        "ui": { "$ref": "#/$defs/ui" },
+        "ui": {
+          "$ref": "#/$defs/ui"
+        },
         "_capabilitySurface": {
           "type": "array",
-          "items": { "$ref": "#/$defs/capabilityRow" },
+          "items": {
+            "$ref": "#/$defs/capabilityRow"
+          },
           "$comment": "导出时由校验器生成；导入时供人审（检查 #9）。"
+        },
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/poolZone"
+          },
+          "$comment": "环控区：可复用 AMZ 的注册处，由监听器激活。**环只允许出现在这里**——主流程 order 仍然必须无环（#17）。"
         }
       }
     },
-
     "invoke": {
       "type": "object",
-      "required": ["when"],
+      "required": [
+        "when"
+      ],
       "additionalProperties": false,
       "properties": {
         "tags": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "$comment": "给 DIR 的廉价一筛，避免读全部 when。"
         },
         "when": {
@@ -68,45 +109,68 @@
         },
         "args": {
           "type": "array",
-          "items": { "$ref": "#/$defs/arg" }
+          "items": {
+            "$ref": "#/$defs/arg"
+          }
         }
       }
     },
-
     "arg": {
       "type": "object",
-      "required": ["name", "type"],
+      "required": [
+        "name",
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "$ref": "#/$defs/id" },
-        "type": { "enum": ["text", "refs", "int", "bool"] },
-        "required": { "type": "boolean", "default": false }
+        "name": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "text",
+            "refs",
+            "int",
+            "bool"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        }
       }
     },
-
     "defaults": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "model": { "type": "string" },
+        "model": {
+          "type": "string"
+        },
         "tools": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "$comment": "SWF 级默认，AMZ 可覆盖（规格 02 §1 的 ②⑤）。"
     },
-
     "amzEntry": {
       "oneOf": [
-        { "$ref": "#/$defs/amzRef" },
-        { "$ref": "#/$defs/amz" }
+        {
+          "$ref": "#/$defs/amzRef"
+        },
+        {
+          "$ref": "#/$defs/amz"
+        }
       ]
     },
-
     "amzRef": {
       "type": "object",
-      "required": ["$ref"],
+      "required": [
+        "$ref"
+      ],
       "additionalProperties": false,
       "properties": {
         "$ref": {
@@ -115,79 +179,157 @@
         }
       }
     },
-
     "amz": {
       "type": "object",
-      "required": ["id", "kind"],
+      "required": [
+        "id",
+        "kind"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "kind": { "enum": ["ttc", "exp", "pipe", "step"] },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "ttc",
+            "exp",
+            "pipe",
+            "step"
+          ]
+        },
         "prompt": {
           "type": "string",
           "$comment": "固定 SystemPrompt。kind=step 时可省略（由 scp 提供）。"
         },
         "tools": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "$comment": "必须是「能完成任务的最小集」（检查 #1）。编译为 restrict({allow})。"
         },
         "guards": {
           "type": "array",
-          "items": { "$ref": "#/$defs/guard" },
+          "items": {
+            "$ref": "#/$defs/guard"
+          },
           "$comment": "可选细粒度拒绝规则，编译为单调 guard()（只能 deny）。"
         },
-        "model": { "type": "string" },
-        "output": { "$ref": "#/$defs/output" },
-
+        "model": {
+          "type": "string"
+        },
+        "output": {
+          "$ref": "#/$defs/output"
+        },
         "extends": {
           "type": "string",
           "pattern": "^amz/[a-z][a-z0-9_]*$",
           "$comment": "CSP_AMZ：只允许覆写 prompt。若同时出现 tools/guards/model → 检查 #11 报错。"
         },
-        "pipe": { "$ref": "#/$defs/pipeSpec" },
-        "step": { "$ref": "#/$defs/stepSpec" }
+        "pipe": {
+          "$ref": "#/$defs/pipeSpec"
+        },
+        "step": {
+          "$ref": "#/$defs/stepSpec"
+        }
       },
       "allOf": [
         {
-          "if": { "required": ["extends"] },
+          "if": {
+            "required": [
+              "extends"
+            ]
+          },
           "then": {
-            "required": ["prompt"],
+            "required": [
+              "prompt"
+            ],
             "not": {
               "anyOf": [
-                { "required": ["tools"] },
-                { "required": ["guards"] },
-                { "required": ["model"] }
+                {
+                  "required": [
+                    "tools"
+                  ]
+                },
+                {
+                  "required": [
+                    "guards"
+                  ]
+                },
+                {
+                  "required": [
+                    "model"
+                  ]
+                }
               ]
             }
           },
-          "else": { "required": ["tools", "output"] }
+          "else": {
+            "required": [
+              "tools",
+              "output"
+            ]
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "pipe" } }, "required": ["kind"] },
-          "then": { "required": ["pipe"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "pipe"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "pipe"
+            ]
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "step" } }, "required": ["kind"] },
-          "then": { "required": ["step"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "step"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "step"
+            ]
+          }
         }
       ]
     },
-
     "pipeSpec": {
       "type": "object",
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "additionalProperties": false,
       "properties": {
-        "from": { "$ref": "#/$defs/id" },
-        "to": { "$ref": "#/$defs/id" }
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        }
       },
       "$comment": "转译器。注意：这是一次真实 LLM 调用，要记账。"
     },
-
     "stepSpec": {
       "type": "object",
-      "required": ["from"],
+      "required": [
+        "from"
+      ],
       "additionalProperties": false,
       "properties": {
         "from": {
@@ -196,7 +338,9 @@
         },
         "tcp": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "$comment": "Tool Change Prompt：工具表变更。"
         },
         "scp": {
@@ -205,10 +349,12 @@
         }
       }
     },
-
     "guard": {
       "type": "object",
-      "required": ["when", "reason"],
+      "required": [
+        "when",
+        "reason"
+      ],
       "additionalProperties": false,
       "properties": {
         "when": {
@@ -216,55 +362,93 @@
           "pattern": "^args\\.",
           "$comment": "守卫只看调用参数，不看模型输出。"
         },
-        "reason": { "type": "string" }
+        "reason": {
+          "type": "string"
+        }
       }
     },
-
     "output": {
       "type": "object",
-      "required": ["body"],
+      "required": [
+        "body"
+      ],
       "additionalProperties": false,
       "properties": {
         "body": {
-          "enum": ["free", "text", "docx", "xlsx", "pptx", "json"],
+          "enum": [
+            "free",
+            "text",
+            "docx",
+            "xlsx",
+            "pptx",
+            "json"
+          ],
           "$comment": "artifact.type 的值域就是它。声明具体类型可让路由判断降到级 1（规格 02 §5.6）。"
         },
-        "signal": { "$ref": "#/$defs/signal" }
+        "signal": {
+          "$ref": "#/$defs/signal"
+        }
       }
     },
-
     "signal": {
       "type": "object",
-      "required": ["fields"],
+      "required": [
+        "fields"
+      ],
       "additionalProperties": false,
       "properties": {
         "fields": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "enum": ["bool", "int", "text", "refs"] },
+          "additionalProperties": {
+            "enum": [
+              "bool",
+              "int",
+              "text",
+              "refs"
+            ]
+          },
           "$comment": "检查 #6：所有 when 引用的 signal.X 必须在此声明。"
         },
         "encoder": {
-          "enum": ["self", "rule", "weak", "pipe"],
+          "enum": [
+            "self",
+            "rule",
+            "weak",
+            "pipe"
+          ],
           "default": "self",
           "$comment": "级 2/3/4 只是产生 signal 的手段不同；求值器对三者一视同仁。"
         }
       }
     },
-
     "edge": {
       "type": "object",
-      "required": ["from", "to", "when", "level"],
+      "required": [
+        "from",
+        "to",
+        "when",
+        "level"
+      ],
       "additionalProperties": false,
       "properties": {
-        "from": { "$ref": "#/$defs/id" },
-        "to": { "$ref": "#/$defs/id" },
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        },
         "when": {
           "type": "string",
           "$comment": "文法见规格 02 §5.4。真正的文法校验由 LLMR 校验器做，JSON Schema 只做粗筛。"
         },
         "level": {
-          "enum": [1, 2, 3, 4],
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
           "$comment": "检查 #15：level 1 只能用 artifact./run./args.；level 2-4 只能用 signal.。"
         },
         "else": {
@@ -273,49 +457,112 @@
         }
       }
     },
-
     "ui": {
       "type": "object",
-      "required": ["page"],
       "additionalProperties": false,
       "properties": {
-        "page": {
+        "screens": {
           "type": "array",
-          "prefixItems": [
-            { "const": "AGT" },
-            { "const": "WFW" },
-            { "const": "DIR" },
-            { "const": "WPC" }
-          ],
-          "minItems": 4,
-          "maxItems": 4,
-          "$comment": "固定骨架，SWF 不可自定义（规格 02 §10 默认解 3）。进入 SWF 后 AGT 与此页绑定，此后 stable。"
-        },
-        "panels": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": { "type": "string" }
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/screen"
           },
-          "$comment": "可选：声明各视图内挂哪些面板。省略则用全局默认面板组。"
+          "$comment": "SWF 自带 UI 的页面清单。页面文件（HTML/CSS/JS）是它的资产；这里只声明「有几张、叫什么、什么时候显示」——留在声明里，审查者才看得到这张 SWF 有几个界面。"
         },
         "fallback": {
           "const": "native",
           "$comment": "没有合适页面时回退 DSH 原生 UI——与「小型任务零介入」同构。"
         }
-      }
+      },
+      "$comment": "整个 ui 段可选：没有它 = 这张 SWF 不自带界面，回退通用 AGT 表单。"
     },
-
     "capabilityRow": {
       "type": "object",
-      "required": ["amz", "tools", "guards"],
+      "required": [
+        "amz",
+        "tools",
+        "guards"
+      ],
       "additionalProperties": false,
       "properties": {
-        "amz": { "$ref": "#/$defs/id" },
-        "tools": { "type": "array", "items": { "type": "string" } },
-        "guards": { "type": "array", "items": { "type": "string" } }
+        "amz": {
+          "$ref": "#/$defs/id"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "guards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "$comment": "安全审查对象就是这张表，不是 prompt（规格 02 §7 / 设计规格 §10）。"
+    },
+    "screen": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "entry"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string"
+        },
+        "entry": {
+          "type": "string",
+          "$comment": "相对 SWF 目录的 html 路径，必须落在 <swf-id>/ 之下（不许 ../ 逃逸）。"
+        },
+        "when": {
+          "type": "string",
+          "$comment": "可选。与边同一套 when 文法、同一个求值器（level 2）。按数组顺序求值，第一个为真者胜出；没有 when 的那张作兜底。"
+        }
+      }
+    },
+    "poolZone": {
+      "type": "object",
+      "required": [
+        "id",
+        "on",
+        "run"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "on": {
+          "type": "string",
+          "$comment": "监听器：when 文法，额外允许 event. 命名空间（外部注入的动作/事件）。"
+        },
+        "run": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "$comment": "被激活的 AMZ 序列。这些 AMZ 挂在 amz[] 里，但**不在主流程 order[] 上**。"
+        },
+        "maxRounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3,
+          "$comment": "环控的界：池内往复最多几轮。允许环 ≠ 允许跑不完。"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
     }
   }
 }

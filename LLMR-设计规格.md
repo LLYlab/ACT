@@ -537,7 +537,7 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 输出：① 错误清单（阻断）② 警告清单（提示）③ 能力表面板（AMZ × 工具 × guards）
 ```
 
-### 13.3 十七项检查
+### 13.3 十九项检查
 
 | # | 码 | 检查 | 级别 |
 |---|---|---|---|
@@ -557,7 +557,9 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 | 14 | `LLMR-E112` | 导出的 SWF 仍含未解析 `$ref` | **错误** |
 | 15 | `LLMR-E104` | `level` 与变量命名空间不匹配 | **错误** |
 | 16 | `LLMR-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） | 警告 |
-| 17 | `LLMR-E113` | 图里存在环（从入口可达的子图；入口不唯一时查全图） | **错误** |
+| 17 | `LLMR-E113` | 图里存在环（**只查主流程**；入口不唯一时查主流程全图） | **错误** |
+| 18 | `LLMR-E114` `LLMR-W209` | 环控区：监听器合法、`run` 引用存在、不得与主流程重叠；`maxRounds` 未写 | **错误** / 警告 |
+| 19 | `LLMR-E115` `LLMR-W208` | UI 页面：id/entry 唯一、entry 不得逃出 SWF 目录、兜底页唯一 | **错误** / 警告 |
 
 > **码空间**：`LLMR-E001` 是**结构校验**（JSON Schema）的统一码，携带 ajv 的 `instancePath`；
 > 上表里标 `schema` 的两项由它覆盖，不另设码。
@@ -701,7 +703,7 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
-| **0** | **校验器** —— 加载 + 结构校验 + **17 项**语义检查 + 能力表面与审查哈希 | ✅ 完成（`tools/validator/`） |
+| **0** | **校验器** —— 加载 + 结构校验 + **19 项**语义检查 + 能力表面与审查哈希 | ✅ 完成（`tools/validator/`） |
 | **1** | **加载器** —— `$ref` 解析、defaults、`extends` 物化、导出内联、摘要 | ✅ 完成（`tools/llmr/loader.cjs`） |
 | **2** | **执行器** —— 条件边求值、选出边、执行后端、轨迹 | ✅ 完成（`executor.cjs` + `backends.cjs`） |
 | **2.5** | **暂停与恢复** —— 走到需要人拍板的地方停下来问，答完从那条边接着走 | ✅ 完成（见 §16.3） |
@@ -755,6 +757,105 @@ PDF 里读不出题目 → `needs_input` 要材料。**注意每次运行都必�
 
 ---
 
+### 16.5 环控区（`pool`）：环允许，但必须关进笼子
+
+v1.1 之前，#17 一律拒环。**这是错的**——跑团的回合、自动修代码的"改坏了自己回头修"，
+都是真环。但直接放开回边会让"这张图会不会跑不完"变成不可静态判定的问题。
+
+所以：**环不消灭，关进环控区。**
+
+| | 主流程 | 环控区 |
+|---|---|---|
+| 声明在哪 | `order[]` | `pool[]` |
+| 结构 | **DAG，仍禁环**（#17） | 可以往复，`maxRounds` 封顶 |
+| 谁来推进 | 求值器按边选 | **监听器 `on`**（`event.` 外部动作 / `signal.` AMZ 自报） |
+| 节点 | `amz[]` 的一部分 | `amz[]` 的另一部分，**两边不重叠**（#18） |
+
+```jsonc
+pool: [
+  { id: "retry", on: "signal.build_ok == false", run: ["diagnose", "patch"], maxRounds: 3 },
+  { id: "turn",  on: "event.player_action == true", run: ["judge", "narrate", "save"], maxRounds: 50 }
+]
+```
+
+**三条设计约束，缺一条这个机制就漏：**
+
+1. **两边不重叠**——池里的 AMZ 不进主流程。否则"谁激活它"不可判定（#18 判为错误）。
+2. **池里的 AMZ 也进能力表面**。它们能调的工具、能碰的东西，和主流程节点一样要摆在那张静态表上。
+   否则就是"藏起来的能力"，原则 5 说得清楚：那会击穿整个审查机制。
+3. **环必须有界**。`maxRounds` 是声明里的界，执行器另有 `max-steps` 兜底——
+   **允许循环 ≠ 允许跑不完**。
+
+> 这一条与 §1 的「不做嵌套」不冲突：嵌套是**把一张图塞进另一张图**（能力表面会漏）；
+> 环控区是**把可复用节点挪出主图**（能力表面照样覆盖）。前者破坏可审查性，后者不破坏。
+
+---
+
+### 16.6 自带界面：SWF 带 HTML，清单留在声明里
+
+v1.1 之前 `ui.page` 是**冻结骨架** `[AGT,WFW,DIR,WPC]`，SWF 只能声明 `ui.panels`——
+而 `panels` 从来没被渲染过。v1.1 整个重写。
+
+**资产布局：**
+
+```
+swfs/
+  coding-auto-run.swf.json      声明
+  coding-auto-run/              它的界面（同名目录）
+    ui/index.html  ui/run.html  ui/app.css  ui/app.js
+```
+
+**声明只写清单：**
+
+```jsonc
+ui: {
+  screens: [
+    { id: "goal", title: "目标",   entry: "ui/index.html" },
+    { id: "run",  title: "进行中", entry: "ui/run.html", when: "signal.stage == 'run'" }
+  ]
+}
+```
+
+- 选中哪张：**按数组顺序求值 `when`，第一个为真者胜出**；没写 `when` 的那张作兜底（只能有一张）。
+  和边选 `to`/`else` **同一套文法、同一个求值器**，不发明第二套。
+- `ui` 整段**可选**：没有就是「不自带界面，走通用 AGT 表单」。
+- `fallback: "native"`：没有合适页面时回退宿主原生 UI。
+
+**宿主怎么跑它（三条缺一不可）：**
+
+1. **由 LLM R 服务器托管**（`/ui/<swf-id>/...`），不由 `file://` 打开——
+   只有这样宿主才能在页面顶部注入引导脚本、主题令牌与通用组件。
+2. **`<iframe sandbox="allow-scripts">`**，**不给 `allow-same-origin`**——
+   页面拿到不透明源，摸不到宿主 DOM、拿不到 localStorage、递不了 cookie。
+3. **只走 `postMessage`**，且只给声明过的东西。
+
+**页面能拿到的通道：**
+
+```js
+llmr.ready()                   // → { swf, args, stage, trace, lastOutput, files }
+llmr.run(args) / llmr.resume(startAt, answer)
+llmr.on('step' | 'pause' | 'done' | 'error', fn)
+llmr.fs.read(path) / write(path, text)    // 限定在工作区内
+llmr.dice(n, faces)            // 掷骰 —— **结果自动进轨迹**
+```
+
+> `llmr.dice` 不只是方便：**掷骰必须进轨迹**，否则跑团不可复现，
+> 「固定工作流」这句话就漏了。
+
+**全局 vs 局部：**
+
+| | 谁提供 | 有什么 |
+|---|---|---|
+| 局部 | SWF 自己带 | 页面 HTML / CSS / JS——界面**就该因工作种类而异** |
+| 全局 | LLM R 注册 | 数据通道、运行控制、主题令牌、通用组件（代码视图 / Markdown 渲染 / diff / 叙事流 / 骰子面板） |
+
+**页面是 SWF 的，能力是宿主的**——原则 6 在界面上照样成立。
+
+> ⚠️ 新增的负担：**HTML 进了仓库，就也进了审查面。** 校验器为此新增 #19，
+> 至少保证"这张 SWF 有几个界面、入口在哪"是能看见的。
+
+---
+
 ## 17. 默认决策表（11 项，**已确认 → schema 冻结为 v1.0**）
 
 > ✅ **用户已确认全部 11 项。`llmr.schema.json` 就此冻结为 v1.0。**
@@ -774,7 +875,7 @@ PDF 里读不出题目 → `needs_input` 要材料。**注意每次运行都必�
 | 7 | TWF 打扰平衡 | 默认请教用户；开关打开时**记录完整 TWF 供事后审** | 不阻断但留痕 |
 | 8 | `refs` 标号 | **项目级序号 `int[]`**，宿主组装器 spawn 时解析内联 | |
 | 9 | `step.from` | 指向**某个 AMZ 的完成态** | 任意会话位置暂不支持 |
-| 10 | `ui.page` | **固定 `[AGT,WFW,DIR,WPC]`**，SWF 不可自定义；可选 `ui.panels` | |
+| 10 | `ui` | **v1.1 重写**：`ui.screens[]` 声明页面清单（`id`/`title`/`entry`/`when`），页面本体是**SWF 自带的 HTML**；`ui` 整段可选，没有就是「不自带界面，走通用表单」。原 `ui.page` 固定骨架与 `ui.panels` **作废** | 界面绑定工作种类；但**页面清单留在声明里**，否则塞进 HTML 的东西就没人审得动 |
 | 11 | 级 1 求值 | 同一文法换命名空间 | 修掉 01 的自相矛盾 |
 
 ---

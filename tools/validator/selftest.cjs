@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// LLMR 校验器自测：覆盖全部 17 项检查的错误码
+// LLMR 校验器自测：覆盖全部 19 项检查的错误码
 // 用法：node selftest.cjs
 
 const { runChecks, surfaceHash } = require('./checks.cjs')
@@ -263,6 +263,119 @@ t('#17 不可达节点上的环 → 只报 W203',
     ],
     terminal: ['b'],
   }), {}, ['LLMR-W203'], ['LLMR-E113'])
+
+// ── #18 环控区（pool）──
+const POOL_AMZ = [
+  { id: 'a', kind: 'exp', prompt: 'p', tools: [], output: { body: 'free', signal: { fields: { go: 'bool' } } } },
+  { id: 'b', kind: 'exp', prompt: 'p', tools: [], output: { body: 'text' } },
+  { id: 'r1', kind: 'ttc', prompt: 'p', tools: [], output: { body: 'text' } },
+  { id: 'r2', kind: 'ttc', prompt: 'p', tools: [], output: { body: 'text' } },
+]
+const poolBase = (pool, extra = {}) => base({}, Object.assign({
+  amz: POOL_AMZ,
+  order: [{ from: 'a', to: 'b', when: 'signal.go == true', level: 2 }],
+  terminal: ['b'],
+  pool,
+}, extra))
+
+t('#18 合法环控区（监听器 + 池内 AMZ）→ 零错误',
+  poolBase([{ id: 'retry', on: 'event.retry == true', run: ['r1', 'r2'], maxRounds: 3 }]), {}, [])
+
+t('#18 环控区缺 id → E114',
+  poolBase([{ on: 'event.x == true', run: ['r1'] }]), {}, ['LLMR-E114'])
+
+t('#18 环控区 id 冲突 → E114',
+  poolBase([
+    { id: 'z', on: 'event.x == true', run: ['r1'] },
+    { id: 'z', on: 'event.y == true', run: ['r2'] },
+  ]), {}, ['LLMR-E114'])
+
+t('#18 环控区 run 引用不存在的 AMZ → E114',
+  poolBase([{ id: 'z', on: 'event.x == true', run: ['nope'] }]), {}, ['LLMR-E114'])
+
+t('#18 run 为空 → E114',
+  poolBase([{ id: 'z', on: 'event.x == true', run: [] }]), {}, ['LLMR-E114'])
+
+t('#18 AMZ 同时占主流程与环控区 → E114',
+  poolBase([{ id: 'z', on: 'event.x == true', run: ['a'] }]), {}, ['LLMR-E114'])
+
+t('#18 监听器文法非法 → E103',
+  poolBase([{ id: 'z', on: 'event.x == ', run: ['r1'] }]), {}, ['LLMR-E103'])
+
+t('#18 监听器用了 artifact. → E114（只许 event. / signal.）',
+  poolBase([{ id: 'z', on: 'artifact.count > 0', run: ['r1'] }]), {}, ['LLMR-E114'])
+
+t('#18 监听器可以用 signal.（AMZ 自报也能当触发）→ 合法',
+  poolBase([{ id: 'z', on: 'signal.go == true', run: ['r1'] }]), {}, [])
+
+t('#18 未写 maxRounds → W209（允许环 ≠ 允许无界）',
+  poolBase([{ id: 'z', on: 'event.x == true', run: ['r1'] }]), {}, ['LLMR-W209'])
+
+// 池内 AMZ 不在主流程上，不该被报"不可达"
+t('#18 池内 AMZ 不报不可达（W203）',
+  poolBase([{ id: 'z', on: 'event.x == true', run: ['r1', 'r2'], maxRounds: 2 }]), {}, [], ['LLMR-W203'])
+
+// ── #17 环检测：池里的往复不算主流程环 ──
+// 这正是「允许循环，但环必须进环控」的形状：主流程 a→b 无环，池内 r1/r2 互相激活。
+t('#17 池内往复（环控）不报 E113',
+  poolBase([{ id: 'loop', on: 'event.tick == true', run: ['r1', 'r2'], maxRounds: 5 }]), {}, [], ['LLMR-E113'])
+
+t('#17 主流程里的环仍然报 E113（环控救不了主流程）',
+  base({}, {
+    amz: [
+      { id: 'a', kind: 'exp', prompt: 'p', tools: [], output: { body: 'free', signal: { fields: { go: 'bool' } } } },
+      { id: 'b', kind: 'exp', prompt: 'p', tools: [], output: { body: 'free', signal: { fields: { go: 'bool' } } } },
+      { id: 'r1', kind: 'ttc', prompt: 'p', tools: [], output: { body: 'text' } },
+    ],
+    order: [
+      { from: 'a', to: 'b', when: 'signal.go == true', level: 2, else: 'b' },
+      { from: 'b', to: 'a', when: 'signal.go == true', level: 2, else: 'b' },
+    ],
+    terminal: ['b'],
+    pool: [{ id: 'z', on: 'event.x == true', run: ['r1'], maxRounds: 2 }],
+  }), {}, ['LLMR-E113'])
+
+// ── #19 UI 页面（ui.screens）──
+const uiBase = (screens) => base({}, { ui: { screens } })
+
+t('#19 合法页面清单 → 零错误',
+  uiBase([
+    { id: 'goal', title: '目标', entry: 'ui/index.html' },
+    { id: 'run', title: '进行中', entry: 'ui/run.html', when: "signal.stage == 'run'" },
+  ]), {}, [])
+
+t('#19 页面 id 冲突 → E115',
+  uiBase([
+    { id: 'x', title: 'A', entry: 'ui/a.html' },
+    { id: 'x', title: 'B', entry: 'ui/b.html' },
+  ]), {}, ['LLMR-E115'])
+
+t('#19 entry 重复 → E115',
+  uiBase([
+    { id: 'x', title: 'A', entry: 'ui/a.html' },
+    { id: 'y', title: 'B', entry: 'ui/a.html' },
+  ]), {}, ['LLMR-E115'])
+
+t('#19 entry 用 .. 逃出 SWF 目录 → E115',
+  uiBase([{ id: 'x', title: 'A', entry: '../evil.html' }]), {}, ['LLMR-E115'])
+
+t('#19 entry 用绝对路径 → E115',
+  uiBase([{ id: 'x', title: 'A', entry: '/etc/passwd.html' }]), {}, ['LLMR-E115'])
+
+t('#19 两张页面都没 when → E115（兜底必须唯一）',
+  uiBase([
+    { id: 'x', title: 'A', entry: 'ui/a.html' },
+    { id: 'y', title: 'B', entry: 'ui/b.html' },
+  ]), {}, ['LLMR-E115'])
+
+t('#19 页面 when 文法非法 → E103',
+  uiBase([{ id: 'x', title: 'A', entry: 'ui/a.html', when: 'signal.stage == ' }]), {}, ['LLMR-E103'])
+
+t('#19 entry 不像 html → W208（提示，不拦）',
+  uiBase([{ id: 'x', title: 'A', entry: 'ui/app.js' }]), {}, ['LLMR-W208'])
+
+t('#19 没有 ui 段 → 完全合法（不自带界面，走通用表单）',
+  base({}, { ui: undefined }), {}, [])
 
 // ── 基座必须干净 ──
 t('基座 SWF → 零错误零警告', base(), {}, [])

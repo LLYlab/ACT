@@ -1,5 +1,5 @@
 'use strict'
-// LLMR 语义校验：LLMR-校验器规格.md §3 的 17 项检查
+// LLMR 语义校验：LLMR-校验器规格.md §3 的 19 项检查
 const crypto = require('node:crypto')
 const expr = require('../llmr/expression.cjs')
 
@@ -17,7 +17,10 @@ const classifyTool = (n) => CLASS_OF[n] || 'unknown'
 
 const DETERMINISTIC = ['artifact', 'run', 'args']
 const SIGNAL = ['signal']
-const ALL_NS = [...DETERMINISTIC, ...SIGNAL]
+// event. 是**外部注入**的动作/事件（玩家点了什么、界面提交了什么）。
+// 只有环控区的监听器能用它——边上的 when 仍然只允许 signal.（见 #4/#15）。
+const EVENT = ['event']
+const ALL_NS = [...DETERMINISTIC, ...SIGNAL, ...EVENT]
 
 // 声明的 signal 类型 → 字面量类型
 const LIT_OF = { number: 'int', string: 'text', bool: 'bool', array: 'refs' }
@@ -79,6 +82,14 @@ function runChecks (input, opts = {}) {
 
   // ── 解析边 ──
   const edges = asArray(swf.order).map((e, i) => ({ ...asObject(e), path: `/swf/order/${i}` }))
+
+  // 主流程 order[] 上出现过的所有节点（from / to / else）。
+  // #18 用它判「这个 AMZ 到底归主流程还是归环控区」——两边都占就没法判定谁激活它。
+  const mainFromTargets = new Set()
+  for (const e of edges) {
+    mainFromTargets.add(e.from); mainFromTargets.add(e.to)
+    if (e.else !== undefined) mainFromTargets.add(e.else)
+  }
   for (const e of edges) {
     if (!byId.has(e.from)) E('LLMR-E105', `${e.path}/from`, `边引用的 AMZ 不存在：${e.from}`)
     if (!byId.has(e.to)) E('LLMR-E105', `${e.path}/to`, `边引用的 AMZ 不存在：${e.to}`)
@@ -194,7 +205,12 @@ function runChecks (input, opts = {}) {
       for (const m of adj.get(n) || []) q.push(m)
     }
   }
+  // 环控区里的 AMZ **不在主流程上**，从入口当然走不到——那不是"不可达"，是它本来就归监听器管。
+  const poolRunIds = new Set()
+  for (const z of asArray(asObject(swf).pool)) for (const r of asArray(asObject(z).run)) poolRunIds.add(r)
+
   for (const a of amzs) {
+    if (poolRunIds.has(a.id)) continue
     if (entry && !reach.has(a.id)) W('LLMR-W203', a.path, `不可达：${a.id}`, '从入口出发无法到达')
     const hasOut = (adj.get(a.id) || []).length > 0
     const isTerm = terminal.includes(a.id)
@@ -215,7 +231,11 @@ function runChecks (input, opts = {}) {
   // 环只要含入口，就必然让入口不再唯一（入口同时是别人的目标），E107 会先响——
   // 那时如果就此收手，用户看到的是「入口不唯一」这个**症状**，而不是「图里有环」这个**病因**。
   // 有唯一入口时只看可达部分（不可达的环跑不到，W203 已经标了）；没有入口时全图都看。
-  const scanFrom = entry ? [...reach] : amzs.map((a) => a.id)
+  // **只查主流程**：环是允许的，但必须关进环控区（pool）。
+  // 池里的 AMZ 不在 order[] 上，因此本来就不在这个节点集里。
+  const mainIds = new Set()
+  for (const e of edges) { mainIds.add(e.from); mainIds.add(e.to); if (e.else !== undefined) mainIds.add(e.else) }
+  const scanFrom = entry ? [...reach] : [...mainIds]
   if (scanFrom.length) {
     const WHITE = 0; const GRAY = 1; const BLACK = 2
     const color = new Map()
@@ -303,6 +323,88 @@ function runChecks (input, opts = {}) {
     for (const p of ui.page) if (!uiPages.has(p)) E('LLMR-E105', '/swf/ui/page', `页面组不存在：${p}`)
   }
 
+  // ── #18 环控区（pool）──
+  // 「允许环，但环必须进环控」的落地：主流程仍无环；可复用 AMZ 统一登记在这里，
+  // 由**监听器**（on）激活。检查三件事：谁激活它、它到底归谁、环有没有界。
+  const poolZones = asArray(asObject(swf).pool).map((z, i) => ({ z: asObject(z), path: `/swf/pool/${i}` }))
+  const seenZone = new Map()
+  for (const { z, path: zp } of poolZones) {
+    const zid = z.id
+    if (typeof zid !== 'string' || !zid) { E('LLMR-E114', zp, '环控区缺 id'); continue }
+    if (seenZone.has(zid)) E('LLMR-E114', zp, `环控区 id 冲突：${zid}`)
+    seenZone.set(zid, 1)
+
+    // 监听器：文法合法 + 命名空间只能是 event. / signal.
+    if (typeof z.on !== 'string' || !z.on.trim()) {
+      E('LLMR-E114', `${zp}/on`, '环控区缺监听器 on')
+    } else {
+      let ast = null
+      try { ast = expr.parse(z.on) } catch (e) {
+        E('LLMR-E103', `${zp}/on`, `监听器文法非法：${e.message}`)
+      }
+      if (ast) {
+        for (const bad of expr.badIdentsOf(ast, [...EVENT, ...SIGNAL])) {
+          E('LLMR-E114', `${zp}/on`, `监听器里的变量名非法：${bad}`, `只允许 ${[...EVENT, ...SIGNAL].join(' / ')}`)
+        }
+      }
+    }
+
+    // run：必须是 amz[] 里真实存在的 id，且**不在主流程上**——否则"谁激活它"不可判定
+    const runs = asArray(z.run)
+    if (!runs.length) E('LLMR-E114', `${zp}/run`, '环控区的 run 为空')
+    for (const rid of runs) {
+      if (!byId.has(rid)) { E('LLMR-E114', `${zp}/run`, `环控区引用了不存在的 AMZ：${rid}`); continue }
+      if (mainFromTargets.has(rid)) {
+        E('LLMR-E114', `${zp}/run`, `${rid} 同时在主流程和环控区`, '可复用 AMZ 必须只归监听器管；两边都要用就拆成两个 AMZ')
+      }
+    }
+  }
+  // maxRounds 有上界是 schema 管的；这里只确认**允许环的地方不许无界**
+  for (const { z, path: zp } of poolZones) {
+    if (z.maxRounds === undefined) W('LLMR-W209', zp, `环控区 ${z.id || '?'} 未写 maxRounds`, '缺省按 3 轮；写出来更清楚')
+  }
+
+  // ── #19 UI 页面（ui.screens）──
+  // SWF 自带 HTML，但**页面清单留在声明里**——否则塞在 HTML 里的东西就没人审得动。
+  const uiObj = asObject(asObject(swf).ui)
+  const screens = asArray(uiObj.screens)
+  if (screens.length) {
+    const seenScr = new Set()
+    const seenEntry = new Set()
+    let fallbackCount = 0
+    screens.forEach((sc0, i) => {
+      const sc = asObject(sc0)
+      const sp = `/swf/ui/screens/${i}`
+      const sid = sc.id
+      if (typeof sid !== 'string' || !sid) { E('LLMR-E115', sp, '页面缺 id'); return }
+      if (seenScr.has(sid)) E('LLMR-E115', sp, `页面 id 冲突：${sid}`)
+      seenScr.add(sid)
+
+      const en = sc.entry
+      if (typeof en !== 'string' || !en) { E('LLMR-E115', `${sp}/entry`, `页面 ${sid} 缺 entry`); }
+      else {
+        if (seenEntry.has(en)) E('LLMR-E115', `${sp}/entry`, `entry 重复：${en}`)
+        seenEntry.add(en)
+        // 不许逃出 SWF 自己的目录——UI 资产的范围就是设计期那张表
+        if (en.startsWith('/') || en.startsWith('\\') || en.includes('..')) {
+          E('LLMR-E115', `${sp}/entry`, `entry 逃出了 SWF 目录：${en}`, '必须是 SWF 目录内的相对路径')
+        }
+        if (!/\.html?$/i.test(en)) W('LLMR-W208', `${sp}/entry`, `entry 不像 html：${en}`)
+      }
+
+      if (sc.when === undefined) fallbackCount++
+      else {
+        try { expr.parse(sc.when) } catch (e) {
+          E('LLMR-E103', `${sp}/when`, `页面 when 文法非法：${e.message}`)
+        }
+      }
+    })
+    // 兜底只能有一张：两张都没 when 的话"没匹配上时显示哪张"就不确定了
+    if (fallbackCount > 1) {
+      E('LLMR-E115', '/swf/ui/screens', `有 ${fallbackCount} 张页面没写 when`, '兜底页只能有一张（没写 when 的那张就是兜底）')
+    }
+  }
+
   // ── 能力表面 ──
   const surface = buildSurface(amzs)
   const hash = surfaceHash(surface)
@@ -354,7 +456,9 @@ const CHECKS = [
   { n: 14, codes: ['LLMR-E112'], title: '导出不得残留 $ref' },
   { n: 15, codes: ['LLMR-E104'], title: 'level 与命名空间不匹配' },
   { n: 16, codes: ['LLMR-W207'], title: '引用项必须自带 model' },
-  { n: 17, codes: ['LLMR-E113'], title: '环检测' },
+  { n: 17, codes: ['LLMR-E113'], title: '环检测（只查主流程）' },
+  { n: 18, codes: ['LLMR-E114', 'LLMR-W209'], title: '环控区（pool）' },
+  { n: 19, codes: ['LLMR-E115', 'LLMR-W208'], title: 'UI 页面（ui.screens）' },
 ]
 
 module.exports = { runChecks, buildSurface, surfaceHash, canonicalize, classifyTool, TOOL_CLASSES, CHECKS }

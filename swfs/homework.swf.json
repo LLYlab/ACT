@@ -4,15 +4,41 @@
     "version": 2,
     "title": "作业成品流水线",
     "invoke": {
-      "tags": ["作业", "习题", "homework", "assignment", "题解", "解答", "翻译", "排版", "PDF", "Word", "数学"],
+      "tags": [
+        "作业",
+        "习题",
+        "homework",
+        "assignment",
+        "题解",
+        "解答",
+        "翻译",
+        "排版",
+        "PDF",
+        "Word",
+        "数学"
+      ],
       "when": "用户说「这是这周的作业」并把老师发的那段（或作业单）给你：先判断是不是作业任务，抽信息跟他对一遍，再读 PDF、做成品、直接显示在页面上",
       "args": [
-        { "name": "pdf", "type": "text", "required": false },
-        { "name": "course", "type": "text", "required": false },
-        { "name": "refs", "type": "refs", "required": false }
+        {
+          "name": "pdf",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "course",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "refs",
+          "type": "refs",
+          "required": false
+        }
       ]
     },
-    "defaults": { "model": "deepseek-v4-flash" },
+    "defaults": {
+      "model": "deepseek-v4-flash"
+    },
     "amz": [
       {
         "id": "judge_task",
@@ -22,7 +48,9 @@
         "output": {
           "body": "text",
           "signal": {
-            "fields": { "is_homework": "bool" },
+            "fields": {
+              "is_homework": "bool"
+            },
             "encoder": "self"
           }
         }
@@ -32,17 +60,23 @@
         "kind": "exp",
         "prompt": "这不是作业任务。用一两句话告诉用户：你看不出这是作业任务、你擅长的是把作业做成成品、以及他需要给你什么（作业单 PDF 或题目清单）。**不要硬套流程**。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "extract_info",
         "kind": "exp",
         "prompt": "从用户这段话里抽取**作业信息**，逐条列出：\n1. 课程/科目名\n2. 作业单里的题目清单或题号范围（若提到）\n3. 老师的具体要求（要不要中文翻译、要不要英文对照、公式格式、排版、截止时间、命名规则…）\n4. 提到的文件路径或文件名\n没提到的一项就写「未提到」，**不要编**。",
-        "tools": ["dlt_doc_read"],
+        "tools": [
+          "dlt_doc_read"
+        ],
         "output": {
           "body": "free",
           "signal": {
-            "fields": { "has_task": "bool" },
+            "fields": {
+              "has_task": "bool"
+            },
             "encoder": "self"
           }
         }
@@ -55,7 +89,10 @@
         "output": {
           "body": "free",
           "signal": {
-            "fields": { "ask": "text", "confirmed": "bool" },
+            "fields": {
+              "ask": "text",
+              "confirmed": "bool"
+            },
             "encoder": "self"
           }
         }
@@ -64,12 +101,17 @@
         "id": "read_pdf",
         "kind": "exp",
         "prompt": "用户已确认。现在**自动读**他给的作业 PDF：\n1. 用文档工具读作业单，产出**题目清单**：每题的章节号、题号、分值（若有）、原文页码。\n2. 把每道题所在的原始页面渲染成 PNG（保留原版式与符号）。\n只做读取与渲染，不做解读。",
-        "tools": ["dlt_doc_read", "dlt_doc_convert"],
+        "tools": [
+          "dlt_doc_read",
+          "dlt_doc_convert"
+        ],
         "model": "deepseek-v4-pro",
         "output": {
           "body": "free",
           "signal": {
-            "fields": { "problem_count": "int" },
+            "fields": {
+              "problem_count": "int"
+            },
             "encoder": "self"
           }
         }
@@ -79,45 +121,61 @@
         "kind": "exp",
         "prompt": "作业单里没有读出题目。用一两句话告诉用户需要什么（作业单 PDF、或群公告里的题目清单），不要猜题目。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "translate",
         "kind": "exp",
         "prompt": "把每题英文题面**逐句**翻译成中文。数学符号、变量名、条件与编号原样保留；不要合并句子，不要省略小问 (a)(b)(c)。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "solve_cn",
         "kind": "exp",
         "prompt": "写**可直接抄写**的中文详细解答：逐步推导，每一步说明理由，公式用 LaTeX（$…$ 与 $$…$$），最后给出结论。不要跳步。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "solve_en",
         "kind": "exp",
         "prompt": "Write the **equivalent full English detailed solution** for each problem: the same steps and the same rigor, formulas in LaTeX. Do not abbreviate.",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "draw_figures",
         "kind": "ttc",
         "prompt": "只为**确实需要作图**的题出图（分段函数、几何关系、点集等），输出 PNG。不需要作图的题就跳过，不要硬画。",
-        "tools": ["dlt_run"],
-        "output": { "body": "free" }
+        "tools": [
+          "dlt_run"
+        ],
+        "output": {
+          "body": "free"
+        }
       },
       {
         "id": "render_docx",
         "kind": "ttc",
         "prompt": "把 Markdown（含 LaTeX）用 pandoc 转成 .docx，落到桌面。\n**要求：公式必须是 Word 原生公式（OMML）**，不是纯文本符号——转完要能核对出数量。",
-        "tools": ["dlt_run"],
+        "tools": [
+          "dlt_run"
+        ],
         "output": {
           "body": "docx",
           "signal": {
-            "fields": { "omml_count": "int" },
+            "fields": {
+              "omml_count": "int"
+            },
             "encoder": "self"
           }
         }
@@ -126,18 +184,27 @@
         "id": "fix_formulas",
         "kind": "exp",
         "prompt": "上一版 docx 里公式没有变成 Word 原生公式（OMML）。多半是 Markdown 里 LaTeX 的定界符或写法有问题——修正 LaTeX 写法后重新用 pandoc 转换。",
-        "tools": ["dlt_run"],
-        "output": { "body": "docx" }
+        "tools": [
+          "dlt_run"
+        ],
+        "output": {
+          "body": "docx"
+        }
       },
       {
         "id": "verify_docx",
         "kind": "ttc",
         "prompt": "读回生成的 docx，核对三项：段落数、图片数、Word 原生公式（OMML）数。都对上之后**清理中间产物**，只留桌面上的成品。",
-        "tools": ["dlt_doc_read", "pwsh"],
+        "tools": [
+          "dlt_doc_read",
+          "pwsh"
+        ],
         "output": {
           "body": "text",
           "signal": {
-            "fields": { "verified": "bool" },
+            "fields": {
+              "verified": "bool"
+            },
             "encoder": "self"
           }
         }
@@ -147,33 +214,104 @@
         "kind": "exp",
         "prompt": "收尾。按下面顺序输出**给用户看的最终成品**，直接可读、不要加任何寒暄：\n\n## 题目\n逐题原文 + 中文翻译\n\n## 中文解答\n逐题详细解答（LaTeX）\n\n## English Solution\n逐题英文详细解答\n\n## 交付物\n一行：生成的文件完整路径。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       },
       {
         "id": "abort",
         "kind": "exp",
         "prompt": "某一步失败了。报告：是哪一步、失败信息是什么、需要用户做什么。**不要重试、不要猜、不要跳过**。",
         "tools": [],
-        "output": { "body": "text" }
+        "output": {
+          "body": "text"
+        }
       }
     ],
     "order": [
-      { "from": "judge_task", "to": "extract_info", "when": "signal.is_homework == true", "level": 2, "else": "not_homework" },
-      { "from": "extract_info", "to": "confirm_homework", "when": "signal.has_task == true", "level": 2, "else": "not_homework" },
-      { "from": "confirm_homework", "to": "read_pdf", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "read_pdf", "to": "translate", "when": "signal.problem_count > 0", "level": 2, "else": "needs_input" },
-      { "from": "translate", "to": "solve_cn", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "solve_cn", "to": "solve_en", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "solve_en", "to": "draw_figures", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "draw_figures", "to": "render_docx", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "render_docx", "to": "verify_docx", "when": "signal.omml_count > 0", "level": 2, "else": "fix_formulas" },
-      { "from": "fix_formulas", "to": "verify_docx", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
-      { "from": "verify_docx", "to": "show_result", "when": "run.status == 'ok'", "level": 1, "else": "abort" }
+      {
+        "from": "judge_task",
+        "to": "extract_info",
+        "when": "signal.is_homework == true",
+        "level": 2,
+        "else": "not_homework"
+      },
+      {
+        "from": "extract_info",
+        "to": "confirm_homework",
+        "when": "signal.has_task == true",
+        "level": 2,
+        "else": "not_homework"
+      },
+      {
+        "from": "confirm_homework",
+        "to": "read_pdf",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "read_pdf",
+        "to": "translate",
+        "when": "signal.problem_count > 0",
+        "level": 2,
+        "else": "needs_input"
+      },
+      {
+        "from": "translate",
+        "to": "solve_cn",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "solve_cn",
+        "to": "solve_en",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "solve_en",
+        "to": "draw_figures",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "draw_figures",
+        "to": "render_docx",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "render_docx",
+        "to": "verify_docx",
+        "when": "signal.omml_count > 0",
+        "level": 2,
+        "else": "fix_formulas"
+      },
+      {
+        "from": "fix_formulas",
+        "to": "verify_docx",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "verify_docx",
+        "to": "show_result",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      }
     ],
-    "terminal": ["show_result", "needs_input", "not_homework", "abort"],
-    "ui": {
-      "page": ["AGT", "WFW", "DIR", "WPC"],
-      "fallback": "native"
-    }
+    "terminal": [
+      "show_result",
+      "needs_input",
+      "not_homework",
+      "abort"
+    ]
   }
 }

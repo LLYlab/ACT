@@ -1,6 +1,6 @@
 # LLMR 校验器规格
 
-> 阶段 0 的实现依据。把 `LLMR-设计规格.md` §13 的十七项检查从表格变成可实现的算法。
+> 阶段 0 的实现依据。把 `LLMR-设计规格.md` §13 的十九项检查从表格变成可实现的算法。
 > 本文同时修掉 `LLMR-设计规格.md` 里一处**不可计算**的检查（见 §3 #1）。
 
 ---
@@ -251,6 +251,66 @@ AMZ 项含 $ref，且解析后的 AMZ 无 model   → LLMR-W207（警告）
 
 ---
 
+### #18 环控区（**LLMR-E114 / W209**）
+
+> **允许环，但环必须进环控。** 主流程 `order[]` 仍然必须无环（#17）；
+> 可复用 AMZ 统一登记在 `pool[]` 里，由**监听器** `on` 激活。
+
+```
+pool[i] 缺 id                              → LLMR-E114
+pool[i].id 冲突                            → LLMR-E114
+pool[i].on 缺失                            → LLMR-E114
+pool[i].on 文法非法                        → LLMR-E103
+pool[i].on 用了 event./signal. 之外的命名空间 → LLMR-E114
+pool[i].run 为空                           → LLMR-E114
+pool[i].run 引用了不存在的 AMZ             → LLMR-E114
+pool[i].run 里的 AMZ 同时出现在主流程 order[] → LLMR-E114
+pool[i] 未写 maxRounds                     → LLMR-W209
+```
+
+**为什么"两边都占"是错误而不是警告。** 一个 AMZ 若既是主流程的一步、又被监听器激活，
+"这一次它是被谁触发的"就不可判定了——而**不可判定的东西不该出现在一个要能被审查的系统里**。
+两边都要用，就拆成两个 AMZ。
+
+**为什么 maxRounds 只警告不拦。** schema 已给默认值 3。写出来是为了让审查者一眼看到界在哪，
+不是缺失就出错。但**允许环 ≠ 允许跑不完**，所以这个界必须存在（执行器另有 `max-steps` 兜底）。
+
+**event. 命名空间。** 只有环控区的监听器可以用。`event.` 是**外部注入**的动作/事件
+（玩家点了什么、界面提交了什么）；`signal.` 是 AMZ 自报。边上 `when` 仍然只允许 `signal.`——
+**边的判定属于流程，不属于外部。**
+
+---
+
+### #19 UI 页面（**LLMR-E115 / W208**）
+
+> **SWF 自带 HTML，但页面清单留在声明里。** 页面文件是资产，`ui.screens[]` 只声明
+> 「有几张、叫什么、入口在哪、什么时候显示」。
+
+```
+screens[i] 缺 id                       → LLMR-E115
+screens[i].id 冲突                     → LLMR-E115
+screens[i].entry 缺失                  → LLMR-E115
+screens[i].entry 重复                   → LLMR-E115
+screens[i].entry 以 / 开头或含 ..        → LLMR-E115（逃出 SWF 目录）
+screens[i].entry 不以 .html/.htm 结尾   → LLMR-W208（提示，不拦）
+screens[i].when 文法非法                → LLMR-E103
+两张及以上的 screen 都没写 when         → LLMR-E115（兜底必须唯一）
+没有 ui 段                             → 合法（不自带界面，走通用表单）
+```
+
+**为什么 entry 不许逃出 SWF 目录。** 因为**UI 资产的范围就是设计期那张表**——
+和 AMZ 的工具面同构。一旦 entry 能指到目录外，审查者看到的清单就不再等于实际会加载的东西，
+原则 5（可审查性：能力是设计期的一张静态表）当场作废。
+
+**为什么兜底页必须唯一。** `screens` 按数组顺序求值、第一个 `when` 为真者胜出。
+若两张都没写 `when`，"没匹配上时显示哪张"就不确定了。
+
+**为什么页面清单不省。** 如果只写一句 `entry: "ui/index.html"`，塞在 HTML 里的东西就没人审得动。
+留在声明里，审查者至少能看到**这张 SWF 有几个界面**。
+`ui/` 目录下实际的资源体量由 CLI 侧另行报告（`--ui-root`），属 `LLMR-W208` 级别。
+
+---
+
 ## 4. `when` 表达式解析器
 
 ### 4.1 文法（**新增括号**，比 `LLMR-设计规格.md` §9.4 更完整）
@@ -385,7 +445,9 @@ _review: { at, by, surfaceHash }   # 可选；有则 import 时校验
 | `LLMR-E110` | AMZ id 冲突 |
 | `LLMR-E111` | 有分支出边但缺 `output.signal` |
 | `LLMR-E112` | 导出产物仍含未解析 `$ref` |
-| `LLMR-E113` | 图里存在环（从入口可达的子图） |
+| `LLMR-E113` | 图里存在环（**只看主流程** `order[]`） |
+| `LLMR-E114` | 环控区非法（`pool`）：缺监听器 / 引用不存在的 AMZ / 与主流程重叠 |
+| `LLMR-E115` | UI 页面声明非法（`ui.screens`）：id 或 entry 重复 / entry 逃出 SWF 目录 / 兜底页不唯一 |
 
 ### 警告（提示）
 
@@ -398,6 +460,8 @@ _review: { at, by, surfaceHash }   # 可选；有则 import 时校验
 | `LLMR-W205` | 存在 `step` 型 AMZ（缓存影响提示） |
 | `LLMR-W206` | 同时含 `exec` 与 `artifact` 类工具（CSP 保证削弱） |
 | `LLMR-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） |
+| `LLMR-W208` | `ui.screens[].entry` 不像 html（提示，不拦） |
+| `LLMR-W209` | 环控区未写 `maxRounds`（缺省按 3 轮；写出来更清楚） |
 
 ### 诊断 / 降级（**工具自身状态**，不是 SWF 内容的问题）
 
