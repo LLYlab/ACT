@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict'
-// LLMR WebUI —— LLMR 自己的前端，**不依赖 DSH**。
+// LLM R WebUI —— LLM R 自己的前端，**不依赖 DSH**。
 //
-// LLMR 的前端与后端都能独立运行：
+// LLM R 的前端与后端都能独立运行：
 //   后端 = validator / loader / executor / backends（纯 Node）
 //   前端 = 本文件提供的页面 + JSON 接口
 // DSH 插件只是「接入方式之一」，不是必需。
@@ -241,7 +241,7 @@ const server = http.createServer(async (req, res) => {
 })
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log('LLMR WebUI  http://127.0.0.1:' + PORT + '/')
+  console.log('LLM R WebUI  http://127.0.0.1:' + PORT + '/')
   console.log('目录: ' + DIR)
   console.log('根:   ' + ROOT)
   console.log('真模型后端: ' + (store.getSettings().model.apiKey ? '已配置 Key' : '无 Key（只有 echo）'))

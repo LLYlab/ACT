@@ -1,11 +1,11 @@
-// LLMR · DSH 插件 · Client 半区
+// LLM R · DSH 插件 · Client 半区
 //
 // 这是 `cordis_define` 的 `code.client` 函数体（不是完整模块）。
 // 只能用 React.createElement；只依赖已查证的 builtins：ctx / React / host / styles / console。
 //
 // 只做两件事：
-//   ① 在左侧栏放一个 LLMR 图标（加性槽 sidebar.panellist，replaceRisk: none）
-//   ② 中央面板是一个「打开 LLMR」跳转页
+//   ① 在左侧栏放一个 LLM R 图标（加性槽 sidebar.panellist，replaceRisk: none）
+//   ② 中央面板是一个「打开 LLM R」跳转页
 //
 // 注：sidebar.panellist 的图标是**面板切换器**——点击由 owner 控制，插件没有钩子；
 // 而 `window` 不是本半区已确认的 builtin。所以用 <a target="_blank">，
@@ -13,7 +13,7 @@
 return {
   apply(ctx) {
     const slots = ctx.get('slots')
-    if (slots === undefined) { console.log('LLMR: 缺少 slots 服务'); return }
+    if (slots === undefined) { console.log('LLM R: 缺少 slots 服务'); return }
 
     styles.insert([
       '.llmr-wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:32px}',
@@ -39,13 +39,13 @@ return {
       return React.createElement('div', { className: 'llmr-wrap' },
         React.createElement('div', { className: 'llmr-card' },
           React.createElement('div', { className: 'llmr-mark' }, 'A'),
-          React.createElement('p', { className: 'llmr-title' }, 'LLMR 在自己的窗口里运行'),
+          React.createElement('p', { className: 'llmr-title' }, 'LLM R 在自己的窗口里运行'),
           React.createElement('p', { className: 'llmr-desc' },
-            'LLMR 的前端和后端都能独立运行，不依赖 DSH。它的界面在自己的地址上——',
+            'LLM R 的前端和后端都能独立运行，不依赖 DSH。它的界面在自己的地址上——',
             '这样同一套界面同时服务「单独跑」和「在 DSH 里用」。'),
           url
             ? React.createElement('a', { className: 'llmr-open', href: url, target: '_blank', rel: 'noreferrer' },
-              '打开 LLMR')
+              '打开 LLM R')
             : React.createElement('div', { className: 'llmr-desc' }, '正在读取地址…'),
           url ? React.createElement('p', { className: 'llmr-foot' }, url) : null,
           React.createElement('p', { className: 'llmr-foot' }, '未启动？  node tools/llmr/server.cjs --port=8735')))
@@ -53,12 +53,12 @@ return {
 
     slots.inject('sidebar.panellist', function () {
       return slots.register(
-        { name: 'sidebar.panellist', id: 'llmr', order: 100, label: 'LLMR' },
+        { name: 'sidebar.panellist', id: 'llmr', order: 100, label: 'LLM R' },
         function (props) {
           const size = (props && props.size) || 20
           return React.createElement('span', {
             className: 'llmr-ico',
-            title: 'LLMR',
+            title: 'LLM R',
             style: {
               width: size + 'px',
               height: size + 'px',
@@ -77,6 +77,6 @@ return {
       })
     })
 
-    console.log('LLMR launcher ready')
+    console.log('LLM R launcher ready')
   },
 }

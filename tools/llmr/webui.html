@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LLMR</title>
+<title>LLM R</title>
 <style>
   :root{
     /* 底色：带冷调的近黑。整体只做暗色——一个 runtime 控制台就该长这样 */
@@ -408,7 +408,7 @@
       '<button class="newbtn" id="btnNew"><span class="plus">＋</span> 新建 AGT</button>'
       + '<div class="side-h">我的 AGT</div>' + list
     $('#sideFoot').innerHTML = (S.settings.model && S.settings.model.hasKey)
-      ? '<div class="sidefoot">LLMR · 独立运行</div>'
+      ? '<div class="sidefoot">LLM R · 独立运行</div>'
       : '<div class="sidefoot">未配置模型 API<br><a id="footSet">去设置</a></div>'
     var fset = $('#footSet')
     if (fset) fset.onclick = function () { S.panel = 'settings'; paint() }
@@ -1012,7 +1012,7 @@
     $('#btnBack').onclick = function () { S.panel = null; paint() }
     var s = S.settings, m = s.model || {}
     $('#view').innerHTML = '<div class="page">'
-      + '<p class="title">设置</p><p class="sub">LLMR 独立运行；这些设置存在 LLMR 根目录的 settings.json。</p>'
+      + '<p class="title">设置</p><p class="sub">LLM R 独立运行；这些设置存在 LLM R 根目录的 settings.json。</p>'
 
       + '<div class="card"><div class="h2" style="margin-top:0">模型 API</div>'
       + '<div class="hint" style="margin-bottom:16px">这里配的是<b>接口与凭据</b>。'

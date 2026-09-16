@@ -4,7 +4,7 @@
 
 **LLYlab Light Model Runtime** · 模型运行时
 
-### 别人在给 Agent 加自主性。LLMR 在减。
+### 别人在给 Agent 加自主性。LLM R 在减。
 
 **用「人工设计的固定工作流 + 硬编码调用的隔离容器」，取代「通用 Agent 的自主工具使用」。**
 
@@ -29,9 +29,9 @@
 
 人类团队里没人这么干活。一份作业怎么做、一份合同怎么审、一次发布怎么走——这些是**流程**，是白纸黑字定下来的，不是每次临场发挥。只有流程定不下来的时候，我们才用"你看着办"。
 
-LLMR 把这个常识搬回 Agent：**流程由人写死，模型只负责执行它被分配的那一小块。**
+LLM R 把这个常识搬回 Agent：**流程由人写死，模型只负责执行它被分配的那一小块。**
 
-| | 通用 Agent | LLMR |
+| | 通用 Agent | LLM R |
 |---|---|---|
 | 流程 | 模型临场推理 | **人写死的一张图** |
 | 工具 | 全部塞进上下文 | **每个容器只见自己那几个** |
@@ -46,7 +46,7 @@ LLMR 把这个常识搬回 Agent：**流程由人写死，模型只负责执行�
 
 ## 它长什么样
 
-LLMR 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死的工作流声明。它是纯数据。
+LLM R 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死的工作流声明。它是纯数据。
 
 ```jsonc
 // swfs/homework.swf.json（节选）
@@ -70,7 +70,7 @@ LLMR 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写�
 
 每个 **AMZ** 是一个**独立容器**：它有自己的系统提示词、自己那几个工具、自己的模型。容器之间默认互不可见。边上的 `when` 是由**确定性求值器**算的——不是模型说了算。
 
-> **AMZ = 一个 DSH 对话。** LLM R 不造运行时、不造权限引擎、不造记忆库——DSH 已经把这些做好了，LLMR 只负责**按声明把它们编排起来**。
+> **AMZ = 一个 DSH 对话。** LLM R 不造运行时、不造权限引擎、不造记忆库——DSH 已经把这些做好了，LLM R 只负责**按声明把它们编排起来**。
 
 <div align="center">
 <table><tr>
@@ -196,7 +196,7 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 ## 说清楚门槛（这条必须明说）
 
-**LLMR 不是"装上就什么都能干"的通用 AI。** 它面向**中型/大型、任务性质明确、流程可复用**的工作。
+**LLM R 不是"装上就什么都能干"的通用 AI。** 它面向**中型/大型、任务性质明确、流程可复用**的工作。
 
 **作者门槛很高。** 不会写 SWF 的用户只剩三条路：
 
@@ -204,9 +204,9 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 2. **提 issue 求作者**——但**作者是瓶颈**
 3. 用兜底的临时工作流
 
-> **LLMR 是给"有能力定义自己工作流的人"的工具。**
+> **LLM R 是给"有能力定义自己工作流的人"的工具。**
 >
-> 这是明确的设计取舍，不是待修的缺陷。想让 AI 替你决定一切的人，不该用 LLMR——市场上那样的产品已经很多了。
+> 这是明确的设计取舍，不是待修的缺陷。想让 AI 替你决定一切的人，不该用 LLM R——市场上那样的产品已经很多了。
 
 ---
 
@@ -214,7 +214,7 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 | 我想… | 看 |
 |---|---|
-| 搞懂 LLMR 是什么、为什么这么设计 | **[`LLMR-设计规格.md`](LLMR-设计规格.md)** ← 唯一权威规格 |
+| 搞懂 LLM R 是什么、为什么这么设计 | **[`LLMR-设计规格.md`](LLMR-设计规格.md)** ← 唯一权威规格 |
 | 看结构约束（机器可读） | [`llmr.schema.json`](llmr.schema.json) ← v1.0，已冻结 |
 | 看声明语法与 17 项校验细则 | [`LLMR-声明格式规格-02.md`](LLMR-声明格式规格-02.md) |
 | 看 17 项检查的算法与错误码目录 | [`LLMR-校验器规格.md`](LLMR-校验器规格.md) |
@@ -228,21 +228,21 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 一个项目愿意不做什么，比它宣称能做什么更能说明它是谁。
 
-> **LLMR 只做「把 SWF 跑起来」这一件事，其余全用现成的。**
+> **LLM R 只做「把 SWF 跑起来」这一件事，其余全用现成的。**
 
 编辑界面、权限引擎、记忆库、**嵌套**、训练平台、性能框架、专家路由——
-**不在 LLMR 的范围里，LLMR 也不逐项权衡它们。**
-在那些方向上，LLMR 借用宿主已有的东西：会话、工具与插件、模型路由、界面槽位、大块内容存储。
+**不在 LLM R 的范围里，LLM R 也不逐项权衡它们。**
+在那些方向上，LLM R 借用宿主已有的东西：会话、工具与插件、模型路由、界面槽位、大块内容存储。
 
 而「不做嵌套」这一条有个**副作用**，值得单独写出来，因为它是个陷阱：
 
-> 嵌套会**击穿** LLMR 的审查机制——子 SWF 里的工具绑不进父的能力表面，而审查哈希只覆盖父。
+> 嵌套会**击穿** LLM R 的审查机制——子 SWF 里的工具绑不进父的能力表面，而审查哈希只覆盖父。
 > **改子 SWF 不改哈希 → 审查被绕过。**
 >
-> LLMR 的答案是**不做嵌套**。任何要做嵌套的系统，都必须让
+> LLM R 的答案是**不做嵌套**。任何要做嵌套的系统，都必须让
 > **能力表面递归展开、哈希覆盖整棵子树**——否则"可审查"这个承诺在嵌套出现的第一天就失效了。
 
-这条不是理论推演：它是 LLMR 在设计能力表面时**被自己的机制逼出来的结论**。
+这条不是理论推演：它是 LLM R 在设计能力表面时**被自己的机制逼出来的结论**。
 
 ---
 
@@ -264,9 +264,9 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 ### English
 
-**LLMR turns agent workflows into data you can read, review, and version — instead of letting the model improvise.**
+**LLM R turns agent workflows into data you can read, review, and version — instead of letting the model improvise.**
 
-Every other agent framework is adding autonomy. LLMR removes it: a human writes a fixed workflow (an **SWF**), the model only executes the narrow slice it is assigned inside an isolated container (**AMZ**). No dynamic tool selection, no tool table in context, no cross-container leakage.
+Every other agent framework is adding autonomy. LLM R removes it: a human writes a fixed workflow (an **SWF**), the model only executes the narrow slice it is assigned inside an isolated container (**AMZ**). No dynamic tool selection, no tool table in context, no cross-container leakage.
 
 Zero runtime dependencies. 240 passing assertions. Schema frozen at v1.0. The whole runtime — validator, loader, executor, WebUI — is ~3,900 lines of plain JavaScript.
 
@@ -276,4 +276,4 @@ Start here: **[`LLMR-设计规格.md`](LLMR-设计规格.md)** — the single au
 
 ---
 
-<div align="center"><sub>MIT © 2026 LLYlab · LLMR 不依赖 DSH，前后端都能独立运行</sub></div>
+<div align="center"><sub>MIT © 2026 LLYlab · LLM R 不依赖 DSH，前后端都能独立运行</sub></div>
