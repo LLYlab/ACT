@@ -4,7 +4,7 @@
 // 用法：node executor.selftest.cjs
 
 const loader = require('./loader.cjs')
-const { executeSwf, buildGraph, safeEval } = require('./executor.cjs')
+const { executeSwf, buildGraph, safeEval, selectScreen } = require('./executor.cjs')
 const { echoBackend, httpBackend, dshBackend, renderUserMessage, extractSignal } = require('./backends.cjs')
 
 let pass = 0
@@ -367,6 +367,126 @@ const main = async () => {
     fs.unlinkSync(f)
   }
 
+
+// ══════════ 环控区（pool）══════════
+// 「允许环，但环必须进环控」：主流程无环；池由监听器激活，maxRounds 封顶。
+
+const POOL_SWF = {
+  id: 'pooled', version: 1, invoke: { when: 'x' },
+  amz: [
+    { id: 'a', kind: 'exp', prompt: 'P', tools: [], output: { body: 'free', signal: { fields: { go: 'bool', build_ok: 'bool' } } } },
+    { id: 'done', kind: 'exp', prompt: 'D', tools: [], output: { body: 'text' } },
+    { id: 'diagnose', kind: 'ttc', prompt: 'X', tools: [], output: { body: 'text' } },
+    { id: 'patch', kind: 'ttc', prompt: 'Y', tools: [], output: { body: 'text' } },
+  ],
+  // 只有一条出边 → 不需要 else；不匹配时就"走不通"，正好交给环控区
+  order: [{ from: 'a', to: 'done', when: 'signal.build_ok == true', level: 2 }],
+  terminal: ['done'],
+}
+
+// ① 池不触发 → 主流程照常，零开销
+{
+  const r = await executeSwf(POOL_SWF, {
+    backend: echoBackend({ signals: { a: { build_ok: true } } }),
+    args: {},
+    pool: undefined,
+  })
+  eq('池未触发：主流程照常走完', r.status, 'completed')
+  eq('池未触发：轨迹只有主流程两步', r.trace.map((x) => x.amz), ['a', 'done'])
+  eq('池未触发：poolRounds 为空', r.poolRounds, {})
+}
+
+// ② 监听器触发 → 池跑一轮；resume 把主流程接回 a
+{
+  const r = await executeSwf(Object.assign({}, POOL_SWF, {
+    pool: [{ id: 'retry', on: 'signal.build_ok == false', run: ['diagnose', 'patch'], resume: 'a', maxRounds: 3 }],
+  }), {
+    backend: echoBackend({ signals: { a: { build_ok: false } } }),
+    args: {},
+  })
+  const ids = r.trace.map((x) => x.amz)
+  ok('池触发：diagnose / patch 都跑到了', ids.includes('diagnose') && ids.includes('patch'), ids.join(' → '))
+  ok('池步骤带 pool 标记与轮次', r.trace.some((x) => x.pool === 'retry' && x.round === 1), JSON.stringify(r.trace.map((x) => x.pool)))
+  eq('池步骤的 via = pool', r.trace.filter((x) => x.pool).every((x) => x.via === 'pool'), true)
+}
+
+// ③ maxRounds 封顶：监听器恒为真也不会无限
+{
+  const r = await executeSwf(Object.assign({}, POOL_SWF, {
+    pool: [{ id: 'spin', on: 'signal.build_ok == false', run: ['diagnose'], resume: 'a', maxRounds: 2 }],
+  }), { backend: echoBackend({ signals: { a: { build_ok: false } } }), args: {} })
+  eq('maxRounds=2：池恰好跑 2 轮', r.poolRounds.spin, 2)
+  eq('maxRounds=2：池步骤数 = 2 × run 长度', r.trace.filter((x) => x.pool === 'spin').length, 2)
+}
+
+// ④ resume 让主流程回到指定节点（这是 AutoRun「改坏了自己回头修」的形状）
+{
+  const swf = Object.assign({}, POOL_SWF, {
+    pool: [{ id: 'fix', on: 'signal.build_ok == false', run: ['diagnose'], resume: 'a', maxRounds: 1 }],
+  })
+  const r = await executeSwf(swf, { backend: echoBackend({ signals: { a: { build_ok: false } } }), args: {} })
+  const ids = r.trace.map((x) => x.amz)
+  ok('resume 生效：池跑完后主流程又执行了一次 a', ids.filter((x) => x === 'a').length === 2, ids.join(' → '))
+}
+
+// ⑤ 没有 resume → 池跑完就停在主流程的原处
+{
+  const swf = Object.assign({}, POOL_SWF, {
+    pool: [{ id: 'react', on: 'signal.build_ok == false', run: ['diagnose'], maxRounds: 1 }],
+  })
+  const r = await executeSwf(swf, { backend: echoBackend({ signals: { a: { build_ok: false } } }), args: {} })
+  eq('无 resume：池只跑一轮（rounds 用满）', r.poolRounds.react, 1)
+  eq('无 resume：主流程停在非终态', r.status, 'stopped')
+}
+
+// ⑥ 池内 ask → 暂停（跑团「该你行动了」靠这个）
+{
+  const swf = {
+    id: 'dndish', version: 1, invoke: { when: 'x' },
+    amz: [
+      { id: 'a', kind: 'exp', prompt: 'P', tools: [], output: { body: 'free', signal: { fields: { go: 'bool' } } } },
+      { id: 'done', kind: 'exp', prompt: 'D', tools: [], output: { body: 'text' } },
+      { id: 'judge', kind: 'exp', prompt: 'J', tools: [], output: { body: 'text' } },
+      { id: 'narrate', kind: 'exp', prompt: 'N', tools: [], output: { body: 'text', signal: { fields: { ask: 'text' } } } },
+    ],
+    order: [{ from: 'a', to: 'done', when: 'signal.go == true', level: 2 }],
+    terminal: ['done'],
+    pool: [{ id: 'turn', on: 'event.player_action == true', run: ['judge', 'narrate'], maxRounds: 50 }],
+  }
+  const r = await executeSwf(swf, { backend: echoBackend({ signals: {} }), args: {}, events: { player_action: true } })
+  eq('池内 ask → 整个运行暂停', r.status, 'paused')
+  eq('暂停点在池内节点', r.pause.at, 'narrate')
+  eq('暂停带 pool 归属', r.pause.pool, 'turn')
+}
+
+// ⑦ event. 来自 opts.events，不是 AMZ 自报
+{
+  const swf = Object.assign({}, POOL_SWF, {
+    pool: [{ id: 'z', on: 'event.tick == true', run: ['diagnose'], maxRounds: 1 }],
+  })
+  const noEvent = await executeSwf(swf, { backend: echoBackend({ signals: { a: { build_ok: true } } }), args: {} })
+  eq('未注入 event → 池不触发', noEvent.poolRounds, {})
+  const withEvent = await executeSwf(swf, {
+    backend: echoBackend({ signals: { a: { build_ok: true } } }), args: {}, events: { tick: true },
+  })
+  eq('注入 event.tick → 池触发', withEvent.poolRounds.z, 1)
+}
+
+// ══════════ selectScreen ══════════
+{
+  const swf = { ui: { screens: [
+    { id: 'run', title: 'R', entry: 'ui/r.html', when: "signal.stage == 'run'" },
+    { id: 'goal', title: 'G', entry: 'ui/g.html' },
+  ] } }
+  eq('selectScreen：when 命中就用它', selectScreen(swf, { signal: { stage: 'run' } }).id, 'run')
+  eq('selectScreen：都不命中用兜底', selectScreen(swf, { signal: { stage: 'zzz' } }).id, 'goal')
+  eq('selectScreen：没有 ui 段返回 null', selectScreen({}, {}), null)
+  eq('selectScreen：按数组顺序，第一个为真者胜出',
+    selectScreen({ ui: { screens: [
+      { id: 'x', title: 'X', entry: 'ui/x.html', when: 'signal.go == true' },
+      { id: 'y', title: 'Y', entry: 'ui/y.html', when: 'signal.go == true' },
+    ] } }, { signal: { go: true } }).id, 'x')
+}
   console.log(`\n执行器与后端: ${pass} 通过 / ${fail} 失败`)
   process.exitCode = fail ? 1 : 0
 }

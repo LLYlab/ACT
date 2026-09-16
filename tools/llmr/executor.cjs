@@ -74,7 +74,28 @@ async function executeSwf (swf, opts = {}) {
   const backend = opts.backend
   if (!backend || typeof backend.call !== 'function') throw new Error('executeSwf 需要 backend')
   const args = asObject(opts.args)
+  // 外部注入的动作/事件（玩家点了什么、界面提交了什么）。只有环控区的监听器能看它。
+  const events = asObject(opts.events)
   const maxSteps = opts.maxSteps || DEFAULT_MAX_STEPS
+
+  // ── 环控区 ──
+  // 「允许环，但环必须进环控」：主流程 order[] 仍然无环地走；
+  // 可复用 AMZ 登记在 pool[] 里，由监听器 on 激活，往复由 maxRounds 封顶。
+  const zones = asArray(asObject(swf).pool).map((z0) => {
+    const z = asObject(z0)
+    let ast = null
+    try { ast = expr.parse(String(z.on === undefined ? '' : z.on)) } catch (_) { ast = null }
+    const mr = Number(z.maxRounds)
+    return {
+      id: String(z.id === undefined ? '' : z.id),
+      on: String(z.on === undefined ? '' : z.on),
+      run: asArray(z.run),
+      resume: typeof z.resume === 'string' && z.resume !== '' ? z.resume : null,
+      maxRounds: Number.isFinite(mr) && mr > 0 ? Math.floor(mr) : 3,
+      ast,
+    }
+  }).filter((z) => z.id !== '' && z.ast !== null && z.run.length > 0)
+  const rounds = new Map()
   const onStep = typeof opts.onStep === 'function' ? opts.onStep : null
 
   const g = buildGraph(swf, opts.amzLibrary)
@@ -118,6 +139,7 @@ async function executeSwf (swf, opts = {}) {
       },
       run: { status },
       args,
+      event: events,
     }
 
     // ── 选出边 ──
@@ -159,14 +181,91 @@ async function executeSwf (swf, opts = {}) {
         trace,
         finalOutput: output,
         last: step,
+        poolRounds: roundSummary(rounds),
       }
     }
 
     trace.push(step)
     if (onStep) onStep(step)
 
+    // ── 环控区：每走一步问一次监听器 ──
+    let pendingResume = null
+    let lastPoolOutput
+    if (zones.length) {
+      const HARD_CAP = zones.reduce((n, z) => n + z.maxRounds, 0) + 1
+      for (let guard = 0; guard < HARD_CAP; guard++) {
+        const z = zones.find((zz) => (rounds.get(zz.id) || 0) < zz.maxRounds && safeEval(zz.on, env) === true)
+        if (!z) break
+        rounds.set(z.id, (rounds.get(z.id) || 0) + 1)
+
+        let paused = null
+        for (const pid of z.run) {
+          const pamz = g.amzById.get(pid)
+          if (!pamz) {
+            trace.push({ seq: trace.length, amz: pid, status: 'fail', input: null, output: undefined,
+              signal: {}, env, to: undefined, via: 'pool', expr: undefined, pool: z.id,
+              meta: { error: '池内节点不存在' } })
+            continue
+          }
+          const pinput = { req: args, refs: asArray(args.refs), prev }
+          let pres
+          try {
+            pres = asObject(await backend.call({ amz: pamz, input: pinput, args }))
+          } catch (e) {
+            pres = { ok: false, meta: { error: `后端抛异常：${e && e.message ? e.message : e}` } }
+          }
+          const pstatus = pres.ok === true ? 'ok' : 'fail'
+          const poutput = pres.output
+          const psignal = asObject(pres.signal)
+          const penv = {
+            signal: psignal,
+            artifact: {
+              type: asObject(asObject(pamz).output).body,
+              count: poutput === undefined ? 0 : 1,
+              refs: asArray(args.refs),
+            },
+            run: { status: pstatus },
+            args,
+            event: events,
+          }
+          const pstep = { seq: trace.length, amz: pid, status: pstatus, input: pinput, output: poutput,
+            signal: psignal, env: penv, to: undefined, via: 'pool', expr: undefined,
+            meta: pres.meta, pool: z.id, round: rounds.get(z.id) }
+          const pq = askOf(psignal)
+          if (pq) {
+            pstep.via = 'pause'
+            trace.push(pstep)
+            if (onStep) onStep(pstep)
+            return {
+              ok: false,
+              status: 'paused',
+              pause: { at: pid, question: pq, next: null, seq: pstep.seq, pool: z.id },
+              trace,
+              finalOutput: poutput,
+              last: pstep,
+              poolRounds: roundSummary(rounds),
+            }
+          }
+          trace.push(pstep)
+          if (onStep) onStep(pstep)
+          if (poutput !== undefined) lastPoolOutput = poutput
+          prev = poutput
+          paused = paused || (pstatus === 'fail' ? pid : null)
+        }
+        if (z.resume && g.amzById.has(z.resume)) pendingResume = z.resume
+        if (paused) break // 池内失败就停这一轮，别再空转
+      }
+    }
+
     // ── 终止判定 ──
     if (to === undefined) {
+      // 环控区把流程接回去：主流程自己走不通了，但池说"我修好了，回去再试"。
+      // 注意：**边永远优先**——只有一条边都没匹配上时，resume 才生效。
+      if (pendingResume) {
+        prev = lastPoolOutput === undefined ? prev : lastPoolOutput
+        cur = pendingResume
+        continue
+      }
       const isTerm = g.terminal.has(cur)
       return {
         ok: isTerm && status === 'ok',
@@ -177,6 +276,7 @@ async function executeSwf (swf, opts = {}) {
         trace,
         finalOutput: output,
         last: step,
+        poolRounds: roundSummary(rounds),
       }
     }
 
@@ -187,4 +287,28 @@ async function executeSwf (swf, opts = {}) {
   return { ok: false, status: 'error', reason: '走到了 undefined', trace }
 }
 
-module.exports = { executeSwf, buildGraph, safeEval, DEFAULT_MAX_STEPS }
+/** 池轮数摘要：只保留真跑过的，省得界面上一堆 0 */
+function roundSummary (rounds) {
+  const out = {}
+  for (const [k, v] of rounds) if (v > 0) out[k] = v
+  return out
+}
+
+/**
+ * 选当前该显示哪张界面。
+ * 语义与边选 to/else **完全一致**：按数组顺序求值 when，第一个为真者胜出；
+ * 没写 when 的那张作兜底。没有 ui 段 → 返回 null（走通用表单）。
+ */
+function selectScreen (swf, env) {
+  const screens = asArray(asObject(asObject(swf).ui).screens)
+  if (!screens.length) return null
+  let fallback = null
+  for (const s0 of screens) {
+    const s = asObject(s0)
+    if (s.when === undefined) { if (!fallback) fallback = s; continue }
+    if (safeEval(String(s.when), asObject(env)) === true) return s
+  }
+  return fallback
+}
+
+module.exports = { executeSwf, buildGraph, safeEval, selectScreen, roundSummary }

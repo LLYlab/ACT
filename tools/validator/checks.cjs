@@ -360,6 +360,14 @@ function runChecks (input, opts = {}) {
     }
   }
   // maxRounds 有上界是 schema 管的；这里只确认**允许环的地方不许无界**
+  // resume：池把主流程接回去的目标必须存在，否则"修好了"却回不去
+  for (const { z, path: zp } of poolZones) {
+    if (z.resume === undefined) continue
+    if (typeof z.resume !== 'string' || !z.resume) E('LLMR-E114', zp + '/resume', 'resume 必须是非空 AMZ id')
+    else if (!byId.has(z.resume)) E('LLMR-E114', zp + '/resume', 'resume 指向不存在的 AMZ：' + z.resume)
+    else if (!mainFromTargets.has(z.resume)) E('LLMR-E114', zp + '/resume', 'resume 指向的 ' + z.resume + ' 不在主流程上', 'resume 只能把流程接回主流程的节点')
+  }
+  // maxRounds 有上界是 schema 管的；这里只确认**允许环的地方不许无界**
   for (const { z, path: zp } of poolZones) {
     if (z.maxRounds === undefined) W('LLMR-W209', zp, `环控区 ${z.id || '?'} 未写 maxRounds`, '缺省按 3 轮；写出来更清楚')
   }
