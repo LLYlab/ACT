@@ -1,0 +1,218 @@
+{
+  "swf": {
+    "id": "coding_draft",
+    "version": 1,
+    "title": "在文件里写指令 · Coding Draft",
+    "invoke": {
+      "tags": [
+        "草稿",
+        "draft",
+        "AI标记",
+        "填充",
+        "骨架",
+        "实现",
+        "AIfin"
+      ],
+      "when": "你在文件里写好壳和指令（AI: … /AIfin），它把每一段补成真代码——**保留你的壳，只填肉**",
+      "args": [
+        {
+          "name": "target",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "strategy",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    "defaults": {
+      "model": "deepseek-v4-flash"
+    },
+    "amz": [
+      {
+        "id": "scan",
+        "kind": "ttc",
+        "prompt": "扫目标文件（或目录），找出所有 AI 区：`AI:` 起、`/AIfin` 止，可带策略标签（AI:impl: / AI:fix: / AI:doc:）。\n逐个报出：所在文件、行号、指令原文、策略。**一个都没找到就报 region_count=0。**\n不要自己脑补区域，也不要改文件。",
+        "tools": [
+          "read_file",
+          "list_dir"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "region_count": "int",
+              "stage": "text"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "no_region",
+        "kind": "exp",
+        "prompt": "文件里没有 AI 区。不要硬造——**把标记语法写给用户看**：\n\n```c\nstruct Channel {\n    AI:impl: 给老子搞一个通用接口，内容你自己想\n    /AIfin\n};\n```\n\n再说明三个策略 impl / fix / doc 分别是什么意思。",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      },
+      {
+        "id": "fill",
+        "kind": "exp",
+        "prompt": "逐区补全。每个区都要：\n1. 带上**周围真实代码**当上下文（前后各若干行），不要只看指令\n2. 尊重原有缩进与风格\n3. **只填 AI 区内部**，壳一行都不许动\n报 filling=true。",
+        "tools": [
+          "read_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "filling": "bool",
+              "region_done": "int"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "apply",
+        "kind": "exp",
+        "prompt": "把补全结果**原地写回**：替换 AI 区内部，保留 `AI:` 指令行与 `/AIfin` 行（供下次再跑）。\n写回之后报写入的文件数。",
+        "tools": [
+          "read_file",
+          "write_file"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "applied": "int"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "verify",
+        "kind": "ttc",
+        "prompt": "校验：能编译吗 / 能解析吗。把真实输出读回来，不要凭印象。通过报 ok=true。",
+        "tools": [
+          "run_shell",
+          "read_file"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "ok": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "rework",
+        "kind": "exp",
+        "prompt": "（环控·返工）上一版没通过校验。读错误，**只改出问题的那一个区**，别顺手重构别处。",
+        "tools": [
+          "read_file",
+          "write_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "reworked": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "report",
+        "kind": "exp",
+        "prompt": "汇总：哪些区填了、哪些没填、哪些放弃了，以及每个区用了哪个策略。\n逐区一行，不要贴整段代码。",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      },
+      {
+        "id": "abort",
+        "kind": "exp",
+        "prompt": "某一步失败了。报告：哪一步、失败信息、需要用户做什么。**不要重试、不要猜、不要跳过。**",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      }
+    ],
+    "order": [
+      {
+        "from": "scan",
+        "to": "fill",
+        "when": "signal.region_count > 0",
+        "level": 2,
+        "else": "no_region"
+      },
+      {
+        "from": "fill",
+        "to": "apply",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "apply",
+        "to": "verify",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "verify",
+        "to": "report",
+        "when": "signal.ok == true",
+        "level": 2
+      }
+    ],
+    "terminal": [
+      "report",
+      "no_region",
+      "abort"
+    ],
+    "pool": [
+      {
+        "id": "rework",
+        "on": "signal.ok == false",
+        "run": [
+          "rework"
+        ],
+        "resume": "verify",
+        "maxRounds": 3,
+        "note": "只重试失败的区，最多 3 轮。"
+      }
+    ],
+    "ui": {
+      "screens": [
+        {
+          "id": "fill",
+          "title": "填充",
+          "entry": "ui/fill.html",
+          "when": "signal.filling == true"
+        },
+        {
+          "id": "draft",
+          "title": "草稿",
+          "entry": "ui/draft.html"
+        }
+      ],
+      "fallback": "native"
+    }
+  }
+}

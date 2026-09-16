@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>跑团</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:26px 30px 56px;width:100%}
+  .wrap.mid{max-width:880px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 22px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:15px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:18px;flex-wrap:wrap}
+
+  .split{display:flex;gap:16px;align-items:flex-start;height:100%}
+  .log{flex:1;min-width:0;overflow:auto;max-height:64vh;display:flex;flex-direction:column;gap:14px}
+  .beat{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:16px 20px;white-space:pre-wrap;word-break:break-word;line-height:1.85;font-size:14px}
+  .beat.me{background:transparent;border-style:dashed;color:var(--llmr-fg2);font-size:13.5px}
+  .beat.me b{color:var(--llmr-accent);font-weight:600}
+  .side{width:250px;flex:none}
+  .card{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:14px 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;word-break:break-word;
+      max-height:44vh;overflow:auto;color:var(--llmr-fg2)}
+  .card:empty::before{content:'（还没写回状态）';color:var(--llmr-muted)}
+  .composer{display:flex;gap:10px;align-items:flex-end;margin-top:14px}
+  .composer textarea{min-height:54px}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="split">
+    <div>
+      <div class="log" id="log"></div>
+      <div class="composer">
+        <textarea id="act" rows="2" placeholder="你做什么？（说清动作与意图，掷骰交给它）"></textarea>
+        <button class="llmr-btn primary" id="go" style="flex:none">行动</button>
+      </div>
+      <div class="actions">
+        <button class="llmr-btn" id="save">看存档</button>
+        <button class="llmr-btn" id="reset">重开一场</button>
+        <span class="llmr-hint" id="msg"></span>
+      </div>
+    </div>
+    <div class="side">
+      <label class="f" style="margin-top:0">当前状态</label>
+      <div class="card" id="state"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg'), busy = false
+  function beat (text, mine) {
+    var d = document.createElement('div')
+    d.className = 'beat' + (mine ? ' me' : '')
+    if (mine) d.innerHTML = '<b>你：</b>' + String(text).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] })
+    else d.textContent = text
+    $('#log').appendChild(d)
+    $('#log').scrollTop = $('#log').scrollHeight
+  }
+  function refresh () {
+    return llmr.fs.read('存档/状态.md').then(function (r) { $('#state').textContent = (r && r.text) || '' }).catch(function () {})
+  }
+  $('#go').onclick = function () {
+    var a = $('#act').value.trim()
+    if (!a || busy) { if (!a) $('#act').focus(); return }
+    busy = true; $('#go').disabled = true; msg.textContent = 'DM 在想…'
+    beat(a, true)
+    $('#act').value = ''
+    var camp = (llmr.state() && llmr.state().args && llmr.state().args.campaign) || '迷雾矿坑'
+    llmr.run({ campaign: camp, action: a }, { player_action: true }).then(function (r) {
+      busy = false; $('#go').disabled = false; msg.textContent = ''
+      beat((r && r.finalOutput) || '(没有叙述)')
+      refresh()
+    }).catch(function (e) { busy = false; $('#go').disabled = false; msg.textContent = String(e.message || e) })
+  }
+  $('#save').onclick = function () { llmr.screen('save') }
+  $('#reset').onclick = function () { $('#log').innerHTML = ''; llmr.screen('setup') }
+  llmr.ready().then(function (st) {
+    if (st && st.lastOutput) beat(st.lastOutput)
+    refresh()
+  }).catch(function () {})
+
+})()
+</script>
+</body>
+</html>

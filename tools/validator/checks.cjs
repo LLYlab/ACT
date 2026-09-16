@@ -1,6 +1,8 @@
 'use strict'
 // LLMR 语义校验：LLMR-校验器规格.md §3 的 19 项检查
 const crypto = require('node:crypto')
+const fs = require('node:fs')
+const path = require('node:path')
 const expr = require('../llmr/expression.cjs')
 
 // ── 工具类别表（LLMR-校验器规格.md §3 #1）────────────────────────────────
@@ -61,6 +63,7 @@ function runChecks (input, opts = {}) {
   const library = asObject(opts.amzLibrary)
   const toolRegistry = opts.toolRegistry || null
   const uiPages = opts.uiPages || null
+  const uiRoot = opts.uiRoot || null
 
   const errors = []
   const warnings = []
@@ -398,6 +401,13 @@ function runChecks (input, opts = {}) {
           E('LLMR-E115', `${sp}/entry`, `entry 逃出了 SWF 目录：${en}`, '必须是 SWF 目录内的相对路径')
         }
         if (!/\.html?$/i.test(en)) W('LLMR-W208', `${sp}/entry`, `entry 不像 html：${en}`)
+        // 声明里写着有几张页，磁盘上就得有几张——否则"这张 SWF 有几个界面"就是谎报
+        if (uiRoot) {
+          const abs = path.join(uiRoot, en)
+          if (!abs.startsWith(path.resolve(uiRoot) + path.sep) || !fs.existsSync(abs)) {
+            E('LLMR-E115', `${sp}/entry`, `页面文件不存在：${en}`, '页面是 SWF 自带的资产，声明了就得在')
+          }
+        }
       }
 
       if (sc.when === undefined) fallbackCount++

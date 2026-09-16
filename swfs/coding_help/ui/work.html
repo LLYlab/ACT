@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>工作</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:28px 30px 56px;width:100%}
+  .wrap.mid{max-width:820px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 24px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:16px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:20px;flex-wrap:wrap}
+
+  .split{display:flex;gap:16px;align-items:flex-start;height:100%}
+  .code{flex:1;min-width:0}
+  .code pre{background:var(--llmr-soft);border:1px solid var(--llmr-line2);border-radius:var(--llmr-r);
+      padding:16px 18px;font-size:12.5px;line-height:1.75;overflow:auto;white-space:pre-wrap;
+      word-break:break-word;color:var(--llmr-fg2);min-height:280px;margin:0}
+  .side{width:320px;flex:none;display:flex;flex-direction:column;gap:12px}
+  .out{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:14px 16px;font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word;
+      max-height:340px;overflow:auto;color:var(--llmr-fg)}
+  .out:empty::before{content:'还没问什么。';color:var(--llmr-muted)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="split">
+    <div class="code">
+      <label class="f">你的代码（贴进来，或只贴要问的那段）</label>
+      <textarea id="src" rows="10" placeholder="选中一段贴这儿，然后点右边的「解释这段」"></textarea>
+    </div>
+    <div class="side">
+      <label class="f" style="margin-top:0">它说的</label>
+      <div class="out" id="out"></div>
+      <button class="llmr-btn" id="ask">提问</button>
+      <button class="llmr-btn" id="explain">解释这段</button>
+      <button class="llmr-btn" id="suggest">给下一条建议</button>
+      <button class="llmr-btn" id="look">回看 Goal</button>
+      <span class="llmr-hint" id="msg"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var out = $('#out'), src = $('#src'), msg = $('#msg'), busy = false
+  function show (t) { out.textContent = t || '' }
+  function fire (args, ev, label) {
+    if (busy) return
+    busy = true; msg.textContent = label + '…'
+    llmr.run(args || {}, ev || {}).then(function (r) {
+      busy = false; msg.textContent = ''
+      show((r && r.finalOutput) || '(没有产出)')
+    }).catch(function (e) { busy = false; msg.textContent = String(e.message || e) })
+  }
+  $('#ask').onclick = function () {
+    var q = src.value.trim()
+    if (!q) { src.focus(); return }
+    fire({ question: q, code: q.slice(0, 4000) }, { ask: true }, '正在查')
+  }
+  $('#explain').onclick = function () {
+    var c = src.value.trim()
+    if (!c) { src.focus(); return }
+    fire({ code: c.slice(0, 4000) }, { selection: true }, '正在读')
+  }
+  $('#suggest').onclick = function () {
+    fire({ code: src.value.trim().slice(0, 4000) }, { typing: true }, '正在想')
+  }
+  $('#look').onclick = function () { llmr.screen('goalview') }
+  llmr.ready().then(function (st) {
+    if (st && st.lastOutput) show(st.lastOutput)
+    if (st && st.args && st.args.code) src.value = st.args.code
+  }).catch(function () {})
+
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Goal</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:28px 30px 56px;width:100%}
+  .wrap.mid{max-width:820px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 24px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:16px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:20px;flex-wrap:wrap}
+
+  .paper{background:linear-gradient(180deg,#0f1620,#0c1119);border:1px solid var(--llmr-line);
+      border-radius:var(--llmr-r);padding:24px 28px;white-space:pre-wrap;word-break:break-word;
+      line-height:1.78;font-size:14px;max-width:74ch}
+
+</style>
+</head>
+<body>
+
+<div class="wrap mid">
+  <p class="lead">你当初许的愿</p>
+  <p class="say">这是防跑偏的锚：<b>有些东西做完很顺手，但和 Goal 无关。</b></p>
+  <div class="paper" id="goal">（还没写下）</div>
+  <div class="actions">
+    <button class="llmr-btn primary" id="back">回到工作</button>
+    <button class="llmr-btn" id="check">让它对照一遍</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  llmr.ready().then(function (st) {
+    var a = (st && st.args) || {}
+    if (a.goal) $('#goal').textContent = a.goal
+  }).catch(function () {})
+  $('#back').onclick = function () { llmr.screen('work') }
+  $('#check').onclick = function () {
+    msg.textContent = '正在对照…'
+    llmr.run({}, { review_goal: true }).then(function (r) {
+      msg.textContent = ''
+      if (r && r.finalOutput) $('#goal').textContent = r.finalOutput
+    }).catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+
+})()
+</script>
+</body>
+</html>

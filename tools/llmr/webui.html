@@ -559,13 +559,23 @@
     }
   }
 
-  function uiRun (args, startAt, confirm) {
+  function gotoUiScreen (id) {
+    var sc = screensOf().filter(function (x) { return x.id === id })[0]
+    if (!sc || !UIH.frame) return null
+    UIH.screenId = sc.id
+    UIH.frame.src = uiBase() + safeEntry(sc.entry)
+    if (S.view) S.view.screen = sc
+    return sc
+  }
+
+  function uiRun (args, startAt, confirm, events) {
     if (!S.agt || !S.agt.swf) return Promise.reject(new Error('没有绑定 SWF'))
     S.runArgs = args || {}
     var useHttp = S.settings.backend === 'http'
     var url = '/api/run?path=' + encodeURIComponent(S.agt.swf)
       + '&args=' + encodeURIComponent(JSON.stringify(S.runArgs)) + dirQ()
       + (useHttp ? '&backend=http' : '')
+    if (events && Object.keys(events).length) url += '&events=' + encodeURIComponent(JSON.stringify(events))
     if (startAt) url += '&startAt=' + encodeURIComponent(startAt)
     if (confirm !== undefined) url += '&confirm=' + encodeURIComponent(confirm)
     return api(url).then(function (r) {
@@ -603,8 +613,13 @@
       return
     }
     if (m.type === 'log') { console.log('[swf-ui]', m.payload && m.payload.text); return }
+    if (m.type === 'screen') {
+      var got = gotoUiScreen(((m.payload || {}).id) || '')
+      if (got) reply({ ok: true, screen: got }); else fail(new Error('没有这张页'))
+      return
+    }
     if (m.type === 'run') {
-      uiRun((m.payload && m.payload.args) || {}, null)
+      uiRun((m.payload && m.payload.args) || {}, null, undefined, m.payload && m.payload.events)
         .then(function (r) { reply(pickReply(r)); afterRun(r) })
         .catch(fail)
       return

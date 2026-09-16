@@ -13,6 +13,22 @@ const { runChecks } = require('./checks.cjs')
 // ── 共享件：依赖解析、读声明、读库（全部来自阶段 1 加载器）──
 const loader = require('../llmr/loader.cjs')
 
+/**
+ * SWF 自带界面的根目录。
+ * 先看有没有与 swf.id 同名的目录（服务器也是这个规则），再退回「与声明文件同名」。
+ */
+function resolveUiRoot (target, swf) {
+  const swfId = swf && typeof swf.id === 'string' ? swf.id : ''
+  const screens = swf && swf.ui && Array.isArray(swf.ui.screens) ? swf.ui.screens : []
+  if (!screens.length) return null
+  const dir = path.dirname(path.resolve(target))
+  const byId = path.join(dir, swfId)
+  if (swfId && fs.existsSync(byId)) return byId
+  const byFile = path.join(dir, path.basename(target).replace(/\.swf\.json$/i, ''))
+  if (fs.existsSync(byFile)) return byFile
+  return byId // 不存在也返回，让 #19 报出「页面文件不存在」
+}
+
 function loadAjv () {
   const mod = loader.resolveDep('ajv/dist/2020')
   if (!mod) return null
@@ -119,6 +135,7 @@ function main () {
         amzLibrary: readAmzLibrary(args.lib),
         toolRegistry: readSet(args.tools, '--tools'),
         uiPages: readSet(args.pages, '--pages'),
+        uiRoot: resolveUiRoot(target, swf),
       })
       errors.push(...result.errors)
       warnings.push(...result.warnings)

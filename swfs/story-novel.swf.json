@@ -1,0 +1,273 @@
+{
+  "swf": {
+    "id": "story_novel",
+    "version": 1,
+    "title": "小说工坊 · Story Novel",
+    "invoke": {
+      "tags": [
+        "小说",
+        "写作",
+        "章节",
+        "大纲",
+        "世界观",
+        "人物",
+        "润色",
+        "novel"
+      ],
+      "when": "把大纲、人物、章节都落在工作区的文件里；跨章一致性靠「设定 + 前情摘要」维持，不靠记忆",
+      "args": [
+        {
+          "name": "task",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "chapter",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    "defaults": {
+      "model": "deepseek-v4-flash"
+    },
+    "amz": [
+      {
+        "id": "recall",
+        "kind": "ttc",
+        "prompt": "读工作区：设定/世界观.md、设定/人物.md、大纲.md、摘要/ 下最近几章、进度.json。\n把读到的**实际内容**摘要出来——读不到就说读不到，**不要凭记忆编**。",
+        "tools": [
+          "read_file",
+          "list_dir"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "recalled": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "route",
+        "kind": "ttc",
+        "prompt": "认定这次要做什么，报出 task：outline（改大纲）/ new_chapter（写新章）/ revise（改已有章）。\n直接照用户说的认定，不要自作主张换任务。",
+        "tools": [],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "task": "text",
+              "working": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "gen_outline",
+        "kind": "exp",
+        "prompt": "写/改大纲与设定。三部分：世界观与规则、人物表（动机/关系/弧光）、分章大纲（每章一句话）。\n**人物表和大纲要和已有章节对得上**——冲突了就以已有正文为准并指出来。",
+        "tools": [
+          "read_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "task": "text"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "dispatch",
+        "kind": "ttc",
+        "prompt": "章级任务的转接：把 recall 读到的上下文与用户诉求整理好交下去。只整理，不创作。",
+        "tools": [],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "task": "text"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "gen_chapter",
+        "kind": "exp",
+        "prompt": "写新的一章正文。要求：\n1. 承接前情摘要（不是凭记忆）\n2. 人物言行必须符合人物表\n3. 推进大纲里这一章指定的那件事\n4. 写完整的一章，不要写到一半停\n不要在大纲之外自创关键设定。",
+        "tools": [
+          "read_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "task": "text",
+              "chapter_ok": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "gen_revise",
+        "kind": "exp",
+        "prompt": "改已有的一章。**只改用户指出的问题**，不要把整章重写一遍——重写会丢掉作者的东西。\n改完说明改了哪几处、为什么。",
+        "tools": [
+          "read_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "task": "text"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "distill",
+        "kind": "exp",
+        "prompt": "把刚写完的这章压成一段前情摘要（150 字以内）：发生了什么、人物状态怎么变了、留下了什么钩子。\n摘要要能被下一章直接当上下文用。",
+        "tools": [],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "distilled": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "persist",
+        "kind": "exp",
+        "prompt": "落盘。按内容写到正确的文件：\n- 大纲/设定 → 大纲.md、设定/*.md\n- 新章正文 → 章节/第NNN章.md\n- 前情摘要 → 摘要/第NNN章.md\n- 更新 进度.json（写到第几章）\n**不要把正文只留在对话里。**",
+        "tools": [
+          "read_file",
+          "write_file",
+          "list_dir"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "saved": "bool",
+              "stage": "text"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "abort",
+        "kind": "exp",
+        "prompt": "某一步失败了。报告：哪一步、失败信息、需要用户做什么。**不要重试、不要猜、不要跳过。**",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      }
+    ],
+    "order": [
+      {
+        "from": "recall",
+        "to": "route",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "route",
+        "to": "gen_outline",
+        "when": "signal.task == 'outline'",
+        "level": 2,
+        "else": "dispatch"
+      },
+      {
+        "from": "dispatch",
+        "to": "gen_chapter",
+        "when": "signal.task == 'new_chapter'",
+        "level": 2,
+        "else": "gen_revise"
+      },
+      {
+        "from": "gen_outline",
+        "to": "persist",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      },
+      {
+        "from": "gen_chapter",
+        "to": "distill",
+        "when": "signal.chapter_ok == true",
+        "level": 2,
+        "else": "persist"
+      },
+      {
+        "from": "distill",
+        "to": "persist",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "persist"
+      },
+      {
+        "from": "gen_revise",
+        "to": "persist",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      }
+    ],
+    "terminal": [
+      "persist",
+      "abort"
+    ],
+    "ui": {
+      "screens": [
+        {
+          "id": "new_chapter",
+          "title": "新章",
+          "entry": "ui/new-chapter.html",
+          "when": "signal.task == 'new_chapter'"
+        },
+        {
+          "id": "edit_render",
+          "title": "编辑渲染",
+          "entry": "ui/edit-render.html",
+          "when": "signal.task == 'revise'"
+        },
+        {
+          "id": "manual",
+          "title": "亲自编辑",
+          "entry": "ui/manual.html",
+          "when": "signal.manual == true"
+        },
+        {
+          "id": "outline",
+          "title": "大纲",
+          "entry": "ui/outline.html"
+        }
+      ],
+      "fallback": "native"
+    }
+  }
+}

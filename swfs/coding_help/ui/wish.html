@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>许愿</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:28px 30px 56px;width:100%}
+  .wrap.mid{max-width:820px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 24px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:16px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:20px;flex-wrap:wrap}
+
+  .big{font-size:26px;font-weight:680;letter-spacing:-.028em;margin:0 0 10px;
+      background:linear-gradient(180deg,#fff,#96a8bf);-webkit-background-clip:text;
+      background-clip:text;color:transparent}
+  .note{margin-top:30px;padding-top:18px;border-top:1px solid var(--llmr-line2);
+      font-size:12px;color:var(--llmr-muted);line-height:1.9}
+
+</style>
+</head>
+<body>
+
+<div class="wrap mid">
+  <p class="big">你想要什么？</p>
+  <p class="say">先说清这个，它才会给建议。<b>这份 Goal 会一直锚在那儿</b>——每次回答都回到它上面校准。</p>
+
+  <label class="f">仓库路径</label>
+  <input id="repo" class="llmr-input" type="text" placeholder="C:\path\to\repo" autocomplete="off">
+
+  <label class="f">Goal</label>
+  <textarea id="goal" rows="5" placeholder="例：把 Channel 的读写分离出来，调用方一行都不改。验收：现有测试全过。不做：不引入新依赖。"></textarea>
+
+  <div class="actions">
+    <button class="llmr-btn primary" id="go">许下，开始</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+
+  <div class="note">
+    写完之后的用法很像 Copilot：<b>选中一段代码问它</b>、<b>直接提问</b>、或者<b>让它给下一条建议</b>。<br>
+    <b>它不改你的文件。</b>— 这张流程的能力面里没有写工具。要落地就交给 Draft。
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var repo = $('#repo'), goal = $('#goal'), msg = $('#msg'), btn = $('#go')
+  llmr.ready().then(function (st) {
+    var a = (st && st.args) || {}
+    if (a.repo) repo.value = a.repo
+    if (a.goal) goal.value = a.goal
+  }).catch(function () {})
+  btn.onclick = function () {
+    if (!repo.value.trim()) { msg.textContent = '先给仓库路径'; return }
+    if (!goal.value.trim()) { msg.textContent = '先写清 Goal'; return }
+    btn.disabled = true; msg.textContent = '正在摸底…'
+    llmr.run({ repo: repo.value.trim(), goal: goal.value.trim() }).then(function () {
+      llmr.screen('work')
+    }).catch(function (e) { btn.disabled = false; msg.textContent = String(e.message || e) })
+  }
+
+})()
+</script>
+</body>
+</html>

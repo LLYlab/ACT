@@ -57,8 +57,11 @@
     /** 告诉宿主"我准备好了"，拿回当前状态 */
     ready: function () { return call('ready', null) },
 
-    /** 开始运行。args 会并进 SWF 的入口参数 */
-    run: function (args) { return call('run', { args: args || {} }) },
+    /** 开始运行。args 并进入口参数；events 是**外部动作**，只有环控区监听器看得见 */
+    run: function (args, events) { return call('run', { args: args || {}, events: events || {} }) },
+
+    /** 主动要求换页。流程里没有的页（比如"亲自编辑"）靠它 */
+    screen: function (id) { return call('screen', { id: id }) },
 
     /** 从暂停处继续（signal.ask 的答复进 args.confirm） */
     resume: function (startAt, answer) {

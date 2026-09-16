@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>新章</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:26px 30px 56px;width:100%}
+  .wrap.mid{max-width:880px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 22px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:15px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:18px;flex-wrap:wrap}
+
+  .paper{background:linear-gradient(180deg,#0f1620,#0c1119);border:1px solid var(--llmr-line);
+      border-radius:var(--llmr-r);padding:24px 28px;white-space:pre-wrap;word-break:break-word;
+      line-height:1.85;font-size:14.5px}
+  .paper:empty::before{content:'正文会出现在这里。';color:var(--llmr-muted)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap mid">
+  <p class="lead">写新章</p>
+  <p class="say">它会读<b>大纲 + 人物表 + 近几章摘要</b>再动笔——不是凭记忆。<b>落盘前不写文件。</b></p>
+
+  <div style="display:flex;gap:12px">
+    <div style="width:140px;flex:none">
+      <label class="f" style="margin-top:0">章号</label>
+      <input id="ch" class="llmr-input" type="text" placeholder="3">
+    </div>
+    <div style="flex:1">
+      <label class="f" style="margin-top:0">这一章要写什么</label>
+      <input id="brief" class="llmr-input" type="text" placeholder="留空就照大纲写这一章">
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="llmr-btn primary" id="go">开写</button>
+    <button class="llmr-btn" id="save" disabled>落盘</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+
+  <label class="f">正文</label>
+  <div class="paper" id="out"></div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  $('#go').onclick = function () {
+    var n = $('#ch').value.trim()
+    if (!n) { $('#ch').focus(); return }
+    msg.textContent = '正在写…'; $('#go').disabled = true
+    llmr.run({ task: 'new_chapter', chapter: n, note: $('#brief').value.trim() })
+      .then(function (r) {
+        $('#go').disabled = false; msg.textContent = ''
+        if (r && r.finalOutput) { $('#out').textContent = r.finalOutput; $('#save').disabled = false }
+      }).catch(function (e) { $('#go').disabled = false; msg.textContent = String(e.message || e) })
+  }
+  $('#save').onclick = function () {
+    var n = $('#ch').value.trim()
+    var pad = ('00' + n).slice(-3)
+    msg.textContent = '落盘中…'
+    llmr.fs.write('章节/第' + pad + '章.md', $('#out').textContent)
+      .then(function () { msg.textContent = '已写入 章节/第' + pad + '章.md' })
+      .catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  llmr.ready().then(function (st) {
+    if (st && st.lastOutput) { $('#out').textContent = st.lastOutput; $('#save').disabled = false }
+  }).catch(function () {})
+
+})()
+</script>
+</body>
+</html>

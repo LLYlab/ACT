@@ -344,6 +344,11 @@ const server = http.createServer(async (req, res) => {
       }
 
       // 暂停恢复：startAt 指定从哪个节点接着走；confirm 是用户对上一个问题的答复
+      // 外部动作：环控区监听器（event.）靠它触发
+      let events = {}
+      const evq = u.searchParams.get('events')
+      if (evq) { try { events = JSON.parse(evq) } catch (_) { /* 忽略坏 JSON */ } }
+
       const startAt = u.searchParams.get('startAt') || undefined
       const confirm = u.searchParams.get('confirm')
       if (confirm !== null && confirm !== undefined) entryArgs.confirm = confirm
@@ -353,6 +358,7 @@ const server = http.createServer(async (req, res) => {
         args: entryArgs,
         amzLibrary: prepared.library,
         startAt,
+        events,
       })
 
       // 当前该显示哪张页：用**最后一步的环境**算，和边选 to/else 同一套规则

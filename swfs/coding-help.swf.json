@@ -1,0 +1,229 @@
+{
+  "swf": {
+    "id": "coding_help",
+    "version": 1,
+    "title": "边写边问 · Coding Help",
+    "invoke": {
+      "tags": [
+        "写代码",
+        "辅助",
+        "copilot",
+        "解释",
+        "提问",
+        "怎么改",
+        "建议",
+        "为什么"
+      ],
+      "when": "先说清你想要什么（写一次 Goal，之后就锚在那儿），然后像 Copilot 一样边写边问——它只给建议和解释，**不动你的文件**",
+      "args": [
+        {
+          "name": "repo",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "goal",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    "defaults": {
+      "model": "deepseek-v4-flash"
+    },
+    "amz": [
+      {
+        "id": "wish",
+        "kind": "exp",
+        "prompt": "用户在许愿。把「他想要什么」固化成一份 Goal：目标、验收标准、以及**明确不做**的事。\n写得能被以后拿来对照——因为后面每次回答都要回到这份 Goal 上校准。",
+        "tools": [],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "goal_ok": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "scout",
+        "kind": "exp",
+        "prompt": "只读摸底：读仓库的相关部分，找出**风格约定、架构约定、以及不能碰的东西**。\n这些是后面给建议时的约束。不要改任何文件。",
+        "tools": [
+          "list_dir",
+          "read_file",
+          "grep"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "working": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "handoff",
+        "kind": "exp",
+        "prompt": "交棒。用三句话说明：你在等什么（选一段代码问我 / 直接提问 / 贴报错）、你的 Goal 是什么、你的约束是什么。",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      },
+      {
+        "id": "answer",
+        "kind": "exp",
+        "prompt": "回答用户的提问。**每一条结论都要引到具体文件与行**（形如 path/to/file.ts:42），不能凭空说。\n如果仓库里没有依据，就直说「这里我没读到依据」。不要改文件。",
+        "tools": [
+          "read_file",
+          "grep",
+          "list_dir"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "answered": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "explain",
+        "kind": "exp",
+        "prompt": "解释用户选中的那段代码：它干什么、为什么这么写、有什么坑。\n**顺便指出它与 Goal 的关系**——这段代码是在推进目标，还是在偏离。不要改文件。",
+        "tools": [
+          "read_file"
+        ],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "working": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "suggest",
+        "kind": "exp",
+        "prompt": "用户正在写。给**下一条建议**：要具体到可以直接照做，且要说清新代码和 Goal 的关系。\n只给建议，**不要写文件**——要落地就交给 Draft 那张流程。",
+        "tools": [
+          "read_file"
+        ],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "working": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "revisit",
+        "kind": "exp",
+        "prompt": "用户要回看当初许的愿。把 Goal 原文复述一遍，并指出：这一路做的事里，**哪些在推进它、哪些在偏离**。",
+        "tools": [],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "reviewing": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      }
+    ],
+    "order": [
+      {
+        "from": "wish",
+        "to": "scout",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "handoff"
+      },
+      {
+        "from": "scout",
+        "to": "handoff",
+        "when": "signal.working == true",
+        "level": 2,
+        "else": "handoff"
+      }
+    ],
+    "terminal": [
+      "handoff"
+    ],
+    "pool": [
+      {
+        "id": "ask",
+        "on": "event.ask == true",
+        "run": [
+          "answer"
+        ],
+        "maxRounds": 1,
+        "note": "提问 → 回答。只读，不改文件。"
+      },
+      {
+        "id": "selection",
+        "on": "event.selection == true",
+        "run": [
+          "explain"
+        ],
+        "maxRounds": 1,
+        "note": "选中 → 解释。"
+      },
+      {
+        "id": "typing",
+        "on": "event.typing == true",
+        "run": [
+          "suggest"
+        ],
+        "maxRounds": 1,
+        "note": "在写 → 给下一条建议。"
+      },
+      {
+        "id": "lookback",
+        "on": "event.review_goal == true",
+        "run": [
+          "revisit"
+        ],
+        "maxRounds": 1,
+        "note": "回看 Goal —— 防跑偏的锚。"
+      }
+    ],
+    "ui": {
+      "screens": [
+        {
+          "id": "work",
+          "title": "工作",
+          "entry": "ui/work.html",
+          "when": "signal.working == true"
+        },
+        {
+          "id": "goalview",
+          "title": "Goal",
+          "entry": "ui/goalview.html",
+          "when": "signal.reviewing == true"
+        },
+        {
+          "id": "wish",
+          "title": "许愿",
+          "entry": "ui/wish.html"
+        }
+      ],
+      "fallback": "native"
+    }
+  }
+}

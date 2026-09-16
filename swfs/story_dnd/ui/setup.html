@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开场</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:26px 30px 56px;width:100%}
+  .wrap.mid{max-width:880px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 22px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:15px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:18px;flex-wrap:wrap}
+
+  .paper{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:20px 24px;white-space:pre-wrap;word-break:break-word;line-height:1.8;font-size:14px;
+      max-height:40vh;overflow:auto}
+  .paper:empty::before{content:'开场叙述会出现在这里。';color:var(--llmr-muted)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap mid">
+  <p class="lead">开一场团</p>
+  <p class="say">AI 当 DM。<b>每个回合：读存档 → 判定 → 叙述 → 写回状态。</b>回合循环只允许出现在环控区。</p>
+
+  <label class="f">战役名 / 存档目录</label>
+  <input id="camp" class="llmr-input" type="text" placeholder="迷雾矿坑" autocomplete="off">
+
+  <div class="actions">
+    <button class="llmr-btn primary" id="go">开始</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+
+  <label class="f">开场</label>
+  <div class="paper" id="out"></div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  llmr.ready().then(function (st) {
+    var a = (st && st.args) || {}
+    if (a.campaign) $('#camp').value = a.campaign
+    if (st && st.lastOutput) $('#out').textContent = st.lastOutput
+  }).catch(function () {})
+  $('#go').onclick = function () {
+    var c = $('#camp').value.trim()
+    if (!c) { $('#camp').focus(); return }
+    msg.textContent = '正在开局…'; $('#go').disabled = true
+    llmr.run({ campaign: c }).then(function (r) {
+      $('#go').disabled = false; msg.textContent = ''
+      if (r && r.finalOutput) $('#out').textContent = r.finalOutput
+      var s = r && r.screen
+      if (s && s.id === 'play') llmr.screen('play')
+    }).catch(function (e) { $('#go').disabled = false; msg.textContent = String(e.message || e) })
+  }
+
+})()
+</script>
+</body>
+</html>

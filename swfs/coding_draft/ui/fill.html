@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>填充</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:28px 30px 56px;width:100%}
+  .wrap.mid{max-width:820px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 24px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:16px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:20px;flex-wrap:wrap}
+
+  .out{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:18px 20px;white-space:pre-wrap;word-break:break-word;line-height:1.78;
+      font-size:13.5px;max-height:60vh;overflow:auto}
+  .out:empty::before{content:'还没结果。回「草稿」页扫一次。';color:var(--llmr-muted)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap mid">
+  <p class="lead">它填了什么</p>
+  <p class="say">保留你的 <b class="llmr-mono">AI:</b> 与 <b class="llmr-mono">/AIfin</b> 行——下次还能再跑一遍。</p>
+  <div class="out" id="out"></div>
+  <div class="actions">
+    <button class="llmr-btn primary" id="again">再填一次</button>
+    <button class="llmr-btn" id="back">改草稿</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  llmr.ready().then(function (st) {
+    if (st && st.lastOutput) $('#out').textContent = st.lastOutput
+  }).catch(function () {})
+  $('#back').onclick = function () { llmr.screen('draft') }
+  $('#again').onclick = function () {
+    msg.textContent = '再来一遍…'
+    llmr.run({}).then(function (r) {
+      msg.textContent = ''
+      if (r && r.finalOutput) $('#out').textContent = r.finalOutput
+    }).catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+
+})()
+</script>
+</body>
+</html>

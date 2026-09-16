@@ -1,0 +1,180 @@
+{
+  "swf": {
+    "id": "story_dnd",
+    "version": 1,
+    "title": "跑团 · Story DND",
+    "invoke": {
+      "tags": [
+        "跑团",
+        "DND",
+        "龙与地下城",
+        "TRPG",
+        "DM",
+        "掷骰",
+        "冒险",
+        "战役"
+      ],
+      "when": "AI 当 DM。每个回合：读存档 → 判定 → 叙述 → 写回状态。回合循环走环控区，主流程保持无环",
+      "args": [
+        {
+          "name": "campaign",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    "defaults": {
+      "model": "deepseek-v4-flash"
+    },
+    "amz": [
+      {
+        "id": "setup",
+        "kind": "exp",
+        "prompt": "开局准备。读战役设定与存档（如果已有）：人物卡、当前场景、时间线、未结的线索。\n每回合都要重读一遍——**不要凭上一回合的记忆**。读不到存档就按新战役开局。",
+        "tools": [
+          "read_file",
+          "list_dir"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "ready": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "seat",
+        "kind": "exp",
+        "prompt": "开场。描述玩家现在所处的场景：看得见什么、听得见什么、有什么不对劲。\n三到五句，第二人称。结尾**明确问一句「你做什么？」**。",
+        "tools": [],
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "playing": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "judge",
+        "kind": "exp",
+        "prompt": "判定玩家这次行动。\n需要掷骰的，用宿主给的骰子结果（**不要自己编数字**），并说清：掷的什么、难度多少、为什么过/不过。\n不需要掷骰的（显然能做/显然做不到）就直接判，并说明理由。",
+        "tools": [
+          "read_file"
+        ],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "judged": "bool",
+              "success": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "narrate",
+        "kind": "exp",
+        "prompt": "叙述结果。**把判定揉进叙述里**（掷了多少、为什么成/败），不要单独列一段规则说明。\n然后推进世界：NPC 会反应，环境会变，后果要真实。\n结尾再问一句「你做什么？」。",
+        "tools": [],
+        "model": "deepseek-v4-pro",
+        "output": {
+          "body": "text",
+          "signal": {
+            "fields": {
+              "playing": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "save",
+        "kind": "exp",
+        "prompt": "写回存档：人物状态（HP/资源/状态）、位置、已知线索、事件日志（追加一行时间线）。\n**不写回就等于这一回合没发生。**\n报出写入的文件。",
+        "tools": [
+          "read_file",
+          "write_file"
+        ],
+        "output": {
+          "body": "free",
+          "signal": {
+            "fields": {
+              "saved": "bool"
+            },
+            "encoder": "self"
+          }
+        }
+      },
+      {
+        "id": "abort",
+        "kind": "exp",
+        "prompt": "某一步失败了。报告：哪一步、失败信息、需要用户做什么。**不要重试、不要猜。**",
+        "tools": [],
+        "output": {
+          "body": "text"
+        }
+      }
+    ],
+    "order": [
+      {
+        "from": "setup",
+        "to": "seat",
+        "when": "run.status == 'ok'",
+        "level": 1,
+        "else": "abort"
+      }
+    ],
+    "terminal": [
+      "seat",
+      "abort"
+    ],
+    "pool": [
+      {
+        "id": "turn",
+        "on": "event.player_action == true",
+        "run": [
+          "judge",
+          "narrate",
+          "save"
+        ],
+        "maxRounds": 1,
+        "note": "一个回合 = 一次运行里的池内往复。回合循环只允许出现在环控区。"
+      }
+    ],
+    "ui": {
+      "screens": [
+        {
+          "id": "play",
+          "title": "跑团",
+          "entry": "ui/play.html",
+          "when": "signal.playing == true"
+        },
+        {
+          "id": "save",
+          "title": "存档",
+          "entry": "ui/save.html",
+          "when": "signal.saved == true"
+        },
+        {
+          "id": "setup",
+          "title": "开场",
+          "entry": "ui/setup.html"
+        }
+      ],
+      "fallback": "native"
+    }
+  }
+}

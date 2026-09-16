@@ -3,6 +3,7 @@
 // LLMR 校验器自测：覆盖全部 19 项检查的错误码
 // 用法：node selftest.cjs
 
+const path = require('node:path')
 const { runChecks, surfaceHash } = require('./checks.cjs')
 
 let pass = 0
@@ -373,6 +374,14 @@ t('#19 页面 when 文法非法 → E103',
 
 t('#19 entry 不像 html → W208（提示，不拦）',
   uiBase([{ id: 'x', title: 'A', entry: 'ui/app.js' }]), {}, ['LLMR-W208'])
+
+t('#19 给了 uiRoot 但页面文件不存在 → E115',
+  base({}, { ui: { screens: [{ id: 'x', title: 'A', entry: 'ui/nope.html' }] } }),
+  { uiRoot: path.join(__dirname, '..', '..', 'verify') }, ['LLMR-E115'])
+
+t('#19 给了 uiRoot 且文件存在 → 合法',
+  base({}, { ui: { screens: [{ id: 'x', title: 'A', entry: 'write_doc.swf.json' }] } }),
+  { uiRoot: path.join(__dirname, '..', '..', 'verify') }, [])
 
 t('#19 没有 ui 段 → 完全合法（不自带界面，走通用表单）',
   base({}, { ui: undefined }), {}, [])

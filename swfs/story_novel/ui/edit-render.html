@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>编辑渲染</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:26px 30px 56px;width:100%}
+  .wrap.mid{max-width:880px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 22px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:15px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:18px;flex-wrap:wrap}
+
+  .split{display:flex;gap:16px;align-items:flex-start}
+  .split > div{flex:1;min-width:0}
+  .prev{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:22px 26px;line-height:1.85;font-size:14.5px;max-height:60vh;overflow:auto}
+  .prev h1{font-size:19px;margin:.6em 0 .4em}
+  .prev h2{font-size:16px;margin:.9em 0 .35em;color:var(--llmr-fg)}
+  .prev p{margin:.65em 0}
+  .prev blockquote{border-left:2px solid var(--llmr-accent);margin:.8em 0;padding:.2em 0 .2em 14px;
+      color:var(--llmr-fg2)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="lead">编辑与渲染</p>
+  <p class="say">左改右看。让 AI 改的时候，<b>它只改你指出的问题</b>——不会把整章重写一遍。</p>
+
+  <div style="display:flex;gap:12px">
+    <div style="width:200px;flex:none">
+      <label class="f" style="margin-top:0">章节文件</label>
+      <input id="file" class="llmr-input" type="text" placeholder="章节/第003章.md">
+    </div>
+    <div style="flex:1">
+      <label class="f" style="margin-top:0">要它改什么（留空则只读）</label>
+      <input id="ask" class="llmr-input" type="text" placeholder="例：第三段对话太干，加一点潜台词">
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="llmr-btn" id="load">读取</button>
+    <button class="llmr-btn primary" id="rev">让它改</button>
+    <button class="llmr-btn" id="save">保存</button>
+    <button class="llmr-btn" id="manual">亲自编辑</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+
+  <div class="split">
+    <div><label class="f">Markdown 源</label><textarea id="src" rows="18"></textarea></div>
+    <div><label class="f">渲染预览</label><div class="prev" id="prev"></div></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  // 极简 Markdown 渲染——够用就好，不引外部库（页面是 sandbox 的，也不该引）
+  function md (t) {
+    var esc = function (s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] }) }
+    return esc(t).split(/\n{2,}/).map(function (b) {
+      if (/^### /.test(b)) return '<h3>' + b.slice(4) + '</h3>'
+      if (/^## /.test(b)) return '<h2>' + b.slice(3) + '</h2>'
+      if (/^# /.test(b)) return '<h1>' + b.slice(2) + '</h1>'
+      if (/^> /.test(b)) return '<blockquote>' + b.replace(/^> ?/gm, '') + '</blockquote>'
+      return '<p>' + b.replace(/\n/g, '<br>') + '</p>'
+    }).join('')
+  }
+  function render () { $('#prev').innerHTML = md($('#src').value || '') }
+  $('#src').addEventListener('input', render)
+  $('#load').onclick = function () {
+    var f = $('#file').value.trim(); if (!f) return
+    msg.textContent = '读取中…'
+    llmr.fs.read(f).then(function (r) {
+      msg.textContent = ''
+      $('#src').value = (r && r.text) || ''
+      if (!r || r.text === null) msg.textContent = '没有这个文件'
+      render()
+    }).catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  $('#save').onclick = function () {
+    var f = $('#file').value.trim(); if (!f) return
+    llmr.fs.write(f, $('#src').value).then(function () { msg.textContent = '已保存 ' + f })
+      .catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  $('#rev').onclick = function () {
+    var f = $('#file').value.trim(), a = $('#ask').value.trim()
+    if (!a) { $('#ask').focus(); return }
+    msg.textContent = '正在改…'
+    llmr.run({ task: 'revise', chapter: f, note: a, text: $('#src').value })
+      .then(function (r) {
+        msg.textContent = ''
+        if (r && r.finalOutput) { $('#src').value = r.finalOutput; render() }
+      }).catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  $('#manual').onclick = function () { llmr.screen('manual') }
+  render()
+
+})()
+</script>
+</body>
+</html>

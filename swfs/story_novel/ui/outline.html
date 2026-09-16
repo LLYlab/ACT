@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大纲</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:26px 30px 56px;width:100%}
+  .wrap.mid{max-width:880px;margin:0 auto}
+  .lead{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 22px}
+  label.f{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:15px 0 7px}
+  .actions{display:flex;gap:9px;align-items:center;margin-top:18px;flex-wrap:wrap}
+
+  .cols{display:flex;gap:14px;align-items:flex-start}
+  .cols > div{flex:1;min-width:0}
+  .tree{background:var(--llmr-panel);border:1px solid var(--llmr-line);border-radius:var(--llmr-r);
+      padding:12px 14px;font-family:var(--llmr-mono);font-size:12px;line-height:1.9;
+      max-height:420px;overflow:auto;color:var(--llmr-fg2)}
+  .tree .d{color:var(--llmr-muted)}
+  .tree .on{color:var(--llmr-accent)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="lead">大纲与设定</p>
+  <p class="say">这是<b>唯一允许随便改</b>的页。跨章一致性靠这里 + 前情摘要，不靠记忆。</p>
+
+  <div class="cols">
+    <div>
+      <label class="f">世界观 / 规则</label>
+      <textarea id="world" rows="7" placeholder="力量体系、地理、历史、不可违背的规则…"></textarea>
+      <label class="f">人物</label>
+      <textarea id="chars" rows="7" placeholder="每人一段：动机 / 关系 / 弧光"></textarea>
+      <label class="f">分章大纲（每章一行）</label>
+      <textarea id="outline" rows="9" placeholder="第1章 …
+第2章 …"></textarea>
+    </div>
+    <div style="width:250px;flex:none">
+      <label class="f" style="margin-top:0">工作区文件</label>
+      <div class="tree" id="tree">（读取中…）</div>
+      <div class="actions">
+        <button class="llmr-btn" id="reload">刷新</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="llmr-btn primary" id="save">保存到文件</button>
+    <button class="llmr-btn" id="gen">让它改大纲</button>
+    <button class="llmr-btn" id="manual">亲自编辑</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+
+  var msg = $('#msg')
+  function rd (p) { return llmr.fs.read(p).then(function (r) { return (r && r.text) || '' }).catch(function () { return '' }) }
+  function load () {
+    Promise.all([rd('设定/世界观.md'), rd('设定/人物.md'), rd('大纲.md'), llmr.fs.list('').catch(function () { return { entries: [] } })])
+      .then(function (v) {
+        $('#world').value = v[0] || ''
+        $('#chars').value = v[1] || ''
+        $('#outline').value = v[2] || ''
+        var es = (v[3] && v[3].entries) || []
+        $('#tree').innerHTML = es.length
+          ? es.map(function (e) { return '<div class="' + (e.dir ? 'd' : '') + '">' + (e.dir ? '▸ ' : '  ') + e.name + '</div>' }).join('')
+          : '<div class="d">（工作区还是空的）</div>'
+      })
+  }
+  $('#reload').onclick = load
+  $('#save').onclick = function () {
+    msg.textContent = '保存中…'
+    Promise.all([
+      llmr.fs.write('设定/世界观.md', $('#world').value),
+      llmr.fs.write('设定/人物.md', $('#chars').value),
+      llmr.fs.write('大纲.md', $('#outline').value),
+    ]).then(function () { msg.textContent = '已保存到工作区'; load() })
+      .catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  $('#gen').onclick = function () {
+    msg.textContent = '正在改…'
+    llmr.run({ task: 'outline', note: $('#outline').value }).then(function (r) {
+      msg.textContent = ''
+      if (r && r.finalOutput) $('#outline').value = r.finalOutput
+      load()
+    }).catch(function (e) { msg.textContent = String(e.message || e) })
+  }
+  $('#manual').onclick = function () { llmr.screen('manual') }
+  load()
+
+})()
+</script>
+</body>
+</html>
