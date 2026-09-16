@@ -1,6 +1,6 @@
-# ACT 校验器（阶段 0）
+# LLMR 校验器（阶段 0）
 
-实现依据：`../../ACT-校验器规格.md`。
+实现依据：`../../LLMR-校验器规格.md`。
 **零依赖切片**——不碰 DSH 运行时、不装载任何插件、只读文件。是三方共用件：作者发布门槛 / 用户本地助手 / 导入安全审查。
 
 ---
@@ -13,7 +13,7 @@ node validate.cjs <target.swf.json> [选项]
 
 | 选项 | 说明 |
 |---|---|
-| `--schema=path` | 结构规范，默认 `../../act.schema.json` |
+| `--schema=path` | 结构规范，默认 `../../llmr.schema.json` |
 | `--mode=author\|export\|import` | 默认 `author`。`import` 会校验 `_review.surfaceHash`；`export` 会拒绝残留 `$ref` |
 | `--lib=dir` | AMZ 库目录，用于解析 `$ref: amz/xxx` |
 | `--tools=json` | 工具名数组（`["read","write"]` 或 `{"tools":[…]}`），用于检查 `tools` 引用存在性 |
@@ -26,7 +26,7 @@ node validate.cjs <target.swf.json> [选项]
 
 ```
 $ node validate.cjs ../../verify/write_doc.swf.json
-ACT 校验器 · mode=author
+LLMR 校验器 · mode=author
 目标: …\verify\write_doc.swf.json
 
 能力表面  sha256:61b9ed8f…
@@ -49,9 +49,9 @@ ACT 校验器 · mode=author
 | `schemfuzz.cjs` | **库 API 健壮性**：1.6 万份畸形 SWF 文档 + 5 万节点深链，断言 `runChecks` 只返回报告 |
 | `auditcodes.cjs` | **一致性审计**：码空间 + 检查项数，实现 ↔ 两份规格 |
 
-> `expression.cjs` / `exprtest.cjs` / `fuzztest.cjs` 已移入 **`tools/act/`**——
+> `expression.cjs` / `exprtest.cjs` / `fuzztest.cjs` 已移入 **`tools/llmr/`**——
 > 求值器是**内核件**（校验器与执行器共用一份实现），不属于校验器。
-> 加载、归一、`$ref` 解析、BOM 处理也都来自 `../act/loader.cjs`。
+> 加载、归一、`$ref` 解析、BOM 处理也都来自 `../llmr/loader.cjs`。
 
 ---
 
@@ -60,10 +60,10 @@ ACT 校验器 · mode=author
 **1. 文法强制要求运算符** —— 原文法 `atom := IDENT op literal` 不接受
 `signal.need_docx` 这种裸布尔字段，而那恰恰是最常见的判断形状
 （"规划器说要不要 docx"），作者被迫写 `signal.need_docx == true`。
-改为 `atom := IDENT [op literal]`；省略时该字段**必须是 `bool`**，否则 `ACT-E106`。
+改为 `atom := IDENT [op literal]`；省略时该字段**必须是 `bool`**，否则 `LLMR-E106`。
 
 **2. #1 原定义不可计算** ——"某 AMZ 有未被任何边/产物类型引用的工具"静态分析做不到。
-改为工具类别配对：`ACT-W201`（含 `exec`）、`ACT-W206`（`exec` + `artifact` 并存），直接对应 CSP 的安全前提。
+改为工具类别配对：`LLMR-W201`（含 `exec`）、`LLMR-W206`（`exec` + `artifact` 并存），直接对应 CSP 的安全前提。
 
 **3. #4 与 #15 会同时命中同一条边** ——`level:2` 且只用确定性变量时，
 `#15` 判它非法（错误）、`#4` 建议降级（警告），**同一输入既错又只是建议**，自相矛盾。
@@ -72,9 +72,9 @@ ACT 校验器 · mode=author
 
 | 输入 | 报 |
 |---|---|
-| `level:1` 且含 `signal.` | `ACT-E104`（错误） |
-| `level:2-4` 且**全是**确定性变量 | **只报 `ACT-W202`**（修法 = 把 level 改成 1） |
-| `level:2-4` 且**混用** `signal.` 与其它 | `ACT-E104`（错误） |
+| `level:1` 且含 `signal.` | `LLMR-E104`（错误） |
+| `level:2-4` 且**全是**确定性变量 | **只报 `LLMR-W202`**（修法 = 把 level 改成 1） |
+| `level:2-4` 且**混用** `signal.` 与其它 | `LLMR-E104`（错误） |
 
 自测里有一条专门守这个回归：`#4 … 只报 W202，不报 E104`。
 
@@ -108,7 +108,7 @@ ACT 校验器 · mode=author
 
 ---
 
-## 环检测（第 17 项，`ACT-E113`）
+## 环检测（第 17 项，`LLMR-E113`）
 
 执行器有 `max-steps` 兜底，但那是**运行期**才发现，代价是烧掉一整条轨迹。
 环是纯静态就确定的事，所以它被前移到了校验期。
@@ -161,7 +161,7 @@ ACT 校验器 · mode=author
 同一个负例从 **12 条降到 1 条**：
 
 ```
-ACT-E001  /swf/amz/0
+LLMR-E001  /swf/amz/0
     must match "then" schema
     → failingKeyword=then；同路径另有 8 条分支错误已折叠
 ```

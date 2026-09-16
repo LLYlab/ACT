@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// ACT when-求值器与静态分析的测试
+// LLMR when-求值器与静态分析的测试
 // 上一轮发布的 expression.cjs 里 evaluate() 是阶段 2 要复用的那份实现，但当时未测。
 // 用法：node exprtest.cjs
 

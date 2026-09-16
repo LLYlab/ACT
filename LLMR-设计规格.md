@@ -1,9 +1,9 @@
-# ACT 设计规格
+# LLMR 设计规格
 
-> **ACT = Agent Character Tool**
+> **LLMR = Agent Character Tool**
 > 定位：**一个 Agent 程序**——用 DSH 的对话作为 AMZ、调 DSH 的工具、用 DSH 的插件。
-> **不造运行时、不造编辑器、不造权限引擎、不造记忆库、不造训练平台**——那些不在 ACT 的范围里。
-> 本文是**唯一权威规格**（lively）。结构约束以 `act.schema.json` 为准；语法与校验细则见 `ACT-声明格式规格-02.md`。
+> **不造运行时、不造编辑器、不造权限引擎、不造记忆库、不造训练平台**——那些不在 LLMR 的范围里。
+> 本文是**唯一权威规格**（lively）。结构约束以 `llmr.schema.json` 为准；语法与校验细则见 `LLMR-声明格式规格-02.md`。
 > 被本文取代的历史文档见 `README.md`。
 
 ---
@@ -14,7 +14,7 @@
 
 > **用「人工设计的固定工作流 + 硬编码调用的隔离容器」取代「通用 agent 的自主工具使用」。**
 
-大多数 agent 框架在**加自主性**；ACT 在**减**。这是它与世界分歧的根本点，也是全部卖点的来源。
+大多数 agent 框架在**加自主性**；LLMR 在**减**。这是它与世界分歧的根本点，也是全部卖点的来源。
 
 | 收益 | 机制 |
 |---|---|
@@ -37,9 +37,9 @@
 
 边界很干脆：
 
-> **ACT 只做「把 SWF 跑起来」这一件事，其余全用 DSH 现成的。**
+> **LLMR 只做「把 SWF 跑起来」这一件事，其余全用 DSH 现成的。**
 
-| ACT 要造的 | 状态 |
+| LLMR 要造的 | 状态 |
 |---|---|
 | SWF / AMZ 声明格式 | ✅ |
 | 校验器（含能力表面与审查凭据） | ✅ |
@@ -47,26 +47,26 @@
 | **执行器**：条件边求值 + 把每个 AMZ 落成 DSH 对话 | ⏳ |
 
 编辑界面、权限引擎、记忆库、嵌套、训练平台、性能框架、专家路由……
-**不在 ACT 的范围里，ACT 也不逐项权衡它们。**
+**不在 LLMR 的范围里，LLMR 也不逐项权衡它们。**
 
-在这些方向上 ACT **借用 DSH 已有的东西**：会话 → DSH 对话本身；
+在这些方向上 LLMR **借用 DSH 已有的东西**：会话 → DSH 对话本身；
 工具 → DSH 工具与插件；模型 → DSH 的模型路由；UI → DSH 槽位；
 大块内容 → DSH 的 `spillStore` / `attachments`。
 
 #### 一条关于嵌套的自省
 
-嵌套系统 ACT 不做，但它会击穿 ACT 的审查机制：子 SWF 里的工具绑不进父的能力表面，
+嵌套系统 LLMR 不做，但它会击穿 LLMR 的审查机制：子 SWF 里的工具绑不进父的能力表面，
 而 `_review.surfaceHash` 只覆盖父 → **改子 SWF 不改哈希 → 审查被绕过**。
 
 → 任何要做嵌套的系统：**能力表面必须递归展开、哈希必须覆盖整棵子树。**
 
 ### 门槛（必须对外明说）
 
-ACT 面向**中型/大型、任务性质明确、流程可复用**的工作。
+LLMR 面向**中型/大型、任务性质明确、流程可复用**的工作。
 
 **但作者门槛很高**：不能写 SWF 的用户只剩三条路——拷大佬的 / 提 issue 求作者 / 用 TWF 兜底，而**作者是瓶颈**。
 
-> **ACT 是给"有能力定义自己工作流的人"的工具**，不是"装上就什么都能干"的通用 AI。
+> **LLMR 是给"有能力定义自己工作流的人"的工具**，不是"装上就什么都能干"的通用 AI。
 
 ---
 
@@ -74,7 +74,7 @@ ACT 面向**中型/大型、任务性质明确、流程可复用**的工作。
 
 | 术语 | 全称 | 定义 |
 |---|---|---|
-| **ACT** | Agent Character Tool | 本插件 |
+| **LLMR** | Agent Character Tool | 本插件 |
 | **AMZ** | AgentMemoryZone | 硬编码、隔离、工具与权限**静态绑定**的执行容器 |
 | **SWF** | StableWorkFlow | **人工设计**的固定工作流（不可变） |
 | **TWF** | Temporary WorkFlow | DIR 运行时构造的**临时**工作流（兜底） |
@@ -98,11 +98,11 @@ ACT 面向**中型/大型、任务性质明确、流程可复用**的工作。
  │
  ▼
 [分级]  模型自评 · prompt 极干净 · 不给工具
-   小 ──▶ 常规直跑（ACT 零介入）
+   小 ──▶ 常规直跑（LLMR 零介入）
    中 ──▶ 判任务性质 ──▶ 进入对应 SWF
    大 ──▶ 先与用户多轮对话判性质 ──▶ 进入对应 SWF
  │
- ▼  ═════ 判定之前 = ACT 唯一的「流动期」 ═════
+ ▼  ═════ 判定之前 = LLMR 唯一的「流动期」 ═════
  │
 进入 SWF ──▶ 一切固定（AGT / UI / AMZ / 工具 / 权限 / 流程）
  │            AGT 与这个人机交互页面绑定，此后 stable
@@ -123,7 +123,7 @@ AMZ × N    硬编码调用 · 高度固定 · 高度隔离
 
 | 规模 | 路径 |
 |---|---|
-| **小** | 不启动 ACT 任何机制，常规直跑。ACT **零开销、零存在感**。 |
+| **小** | 不启动 LLMR 任何机制，常规直跑。LLMR **零开销、零存在感**。 |
 | **中** | 判任务性质 → 进入对应 SWF |
 | **大** | 先与用户**多轮对话**判性质 → 进入对应 SWF |
 
@@ -147,11 +147,11 @@ AMZ:  f(资料标号, 诉求) ──▶ 成品
 
 **在 DSH 上，一个 AMZ 就是一个 DSH 对话。**
 
-由 ACT 按声明把它配置出来（固定的 preset / 工具表 / 模型 / prompt），
+由 LLMR 按声明把它配置出来（固定的 preset / 工具表 / 模型 / prompt），
 用 `subagent`（fresh，对应 ttc·exp）或 `subagent_fork`（带前缀，对应 step）拉起。
 
 > **这是全部简化的来源**：DSH 已经把容器、隔离、工具注册、模型路由、会话分支都做好了。
-> ACT 不造这些，**只按声明去编排它们**。
+> LLMR 不造这些，**只按声明去编排它们**。
 
 ### 5.2 与 AP（agent preset）的区别
 
@@ -320,7 +320,7 @@ op    := '==' | '!=' | 'in' | '>' | '<' | 'startsWith'
 宿主侧、确定性、无副作用；**禁止函数调用、禁止模型参与求值**；
 求值失败（缺字段/类型不匹配）→ **走 `else`**，不中止。
 
-**解析上限**（防栈溢出，详见 `ACT-校验器规格.md` §4.1.1）：输入 8192 字符 / 嵌套深度 128 / 条件项 256。
+**解析上限**（防栈溢出，详见 `LLMR-校验器规格.md` §4.1.1）：输入 8192 字符 / 嵌套深度 128 / 条件项 256。
 超出即 `ParseError`——**畸形输入必须变成可诊断的错误，而不是崩溃**。
 
 ### 9.5 级 2 的正确形态
@@ -393,7 +393,7 @@ AMZ:  固定 SystemPrompt + 按标号内联的段 + 诉求 ──▶ 成品
 | **信息段引用机制** | `ctx.spillStore.saveText() → SpillRef` |
 | 资料摄取 | `attachments`、`fileReferences`、`session-reference` |
 
-> ⚠ **作用域不匹配**：`dsh-spill-local` 是 **session-scoped**，而 ACT 的资料库必须**项目级**。要改。
+> ⚠ **作用域不匹配**：`dsh-spill-local` 是 **session-scoped**，而 LLMR 的资料库必须**项目级**。要改。
 
 ### 10.5 新增攻击面：信息段库 → prompt 内联
 
@@ -416,7 +416,7 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 
 1. **权限粒度 = 工具名可见性。** DSH **没有 per-tool 权限原子**。
    → 「AMZ 与工具+权限绑定」里的权限**是工具表的函数**。
-2. **`guard` 单调**——ACT 给 AMZ 加的守卫只能收紧、不能放松。**即使写错也不可能提权。**
+2. **`guard` 单调**——LLMR 给 AMZ 加的守卫只能收紧、不能放松。**即使写错也不可能提权。**
 3. **AMZ 可见工具集** = `该 AMZ scope 内注册的工具` ∪ `(全局工具 ∩ restrict)`。
 
 **编译规则**：`tools` → `restrict({allow})`；`guards` → 该 scope 内的单调 `guard()`。
@@ -512,14 +512,14 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 
 ### 12.5 兜底
 
-- **没有合适的页面 → 回退 DSH 原生 UI**（ACT 完全不介入）。与"小型任务零介入"同构。
+- **没有合适的页面 → 回退 DSH 原生 UI**（LLMR 完全不介入）。与"小型任务零介入"同构。
 - **逃生门**（任务中途性质变了）：**未定**（§18）。
 
 ---
 
 ## 13. 校验器规格（阶段 0）
 
-> **实现依据见 `ACT-校验器规格.md`**——完整算法、`when` 解析器文法、错误码目录、测试用例。
+> **实现依据见 `LLMR-校验器规格.md`**——完整算法、`when` 解析器文法、错误码目录、测试用例。
 > 本节只列结论。
 
 ### 13.1 三个使用者
@@ -541,29 +541,29 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 
 | # | 码 | 检查 | 级别 |
 |---|---|---|---|
-| 1 | `ACT-W201` `ACT-W206` | 工具面安全：含 `exec` 类 / 同时含 `exec`+`artifact`（**原定义不可计算，已重写**） | 警告 |
-| 2 | `ACT-E101` `ACT-E102` | 有分支的边组必须有 `else`；一个组出现多个 `else` 亦错 | **错误** |
-| 3 | `ACT-E103` ＋schema | `when` 文法合法 **且** 标明 `level` | **错误** |
-| 4 | `ACT-W202` | `level>=2` 但只用确定性变量 → 应降级 1 | 警告（机械判定） |
-| 5 | `ACT-E105` | 引用的 AMZ / 工具 / 页面组存在 | **错误** |
-| 6 | `ACT-E106` | `signal.fields` 与所有引用它的 `when` 字段一致（含类型） | **错误** |
-| 7 | `ACT-E107` `ACT-W203` | 入口不唯一（0 个或多个）；不可达节点 | **错误** / 警告 |
-| 8 | `ACT-E108` `ACT-W204` | 无出边且不在 `terminal` 中；反向：在 `terminal` 中却有出边 | **错误** / 警告 |
-| 9 | `ACT-E109` | 导入路径：能力表已人工过目（校验 `_review.surfaceHash`） | **错误** |
-| 10 | `ACT-W205` | 存在 `step` 型 AMZ（缓存影响提示；**原定义不可判定，已重写**） | 警告 |
+| 1 | `LLMR-W201` `LLMR-W206` | 工具面安全：含 `exec` 类 / 同时含 `exec`+`artifact`（**原定义不可计算，已重写**） | 警告 |
+| 2 | `LLMR-E101` `LLMR-E102` | 有分支的边组必须有 `else`；一个组出现多个 `else` 亦错 | **错误** |
+| 3 | `LLMR-E103` ＋schema | `when` 文法合法 **且** 标明 `level` | **错误** |
+| 4 | `LLMR-W202` | `level>=2` 但只用确定性变量 → 应降级 1 | 警告（机械判定） |
+| 5 | `LLMR-E105` | 引用的 AMZ / 工具 / 页面组存在 | **错误** |
+| 6 | `LLMR-E106` | `signal.fields` 与所有引用它的 `when` 字段一致（含类型） | **错误** |
+| 7 | `LLMR-E107` `LLMR-W203` | 入口不唯一（0 个或多个）；不可达节点 | **错误** / 警告 |
+| 8 | `LLMR-E108` `LLMR-W204` | 无出边且不在 `terminal` 中；反向：在 `terminal` 中却有出边 | **错误** / 警告 |
+| 9 | `LLMR-E109` | 导入路径：能力表已人工过目（校验 `_review.surfaceHash`） | **错误** |
+| 10 | `LLMR-W205` | 存在 `step` 型 AMZ（缓存影响提示；**原定义不可判定，已重写**） | 警告 |
 | 11 | schema | `extends`（CSP_AMZ）声明了 `tools`/`guards`/`model` | **错误** |
-| 12 | `ACT-E110` | AMZ `id` 冲突 | **错误** |
-| 13 | `ACT-E111` | 有分支出边但未声明 `output.signal` | **错误** |
-| 14 | `ACT-E112` | 导出的 SWF 仍含未解析 `$ref` | **错误** |
-| 15 | `ACT-E104` | `level` 与变量命名空间不匹配 | **错误** |
-| 16 | `ACT-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） | 警告 |
-| 17 | `ACT-E113` | 图里存在环（从入口可达的子图；入口不唯一时查全图） | **错误** |
+| 12 | `LLMR-E110` | AMZ `id` 冲突 | **错误** |
+| 13 | `LLMR-E111` | 有分支出边但未声明 `output.signal` | **错误** |
+| 14 | `LLMR-E112` | 导出的 SWF 仍含未解析 `$ref` | **错误** |
+| 15 | `LLMR-E104` | `level` 与变量命名空间不匹配 | **错误** |
+| 16 | `LLMR-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） | 警告 |
+| 17 | `LLMR-E113` | 图里存在环（从入口可达的子图；入口不唯一时查全图） | **错误** |
 
-> **码空间**：`ACT-E001` 是**结构校验**（JSON Schema）的统一码，携带 ajv 的 `instancePath`；
+> **码空间**：`LLMR-E001` 是**结构校验**（JSON Schema）的统一码，携带 ajv 的 `instancePath`；
 > 上表里标 `schema` 的两项由它覆盖，不另设码。
-> 另有 `ACT-E999`（校验器自身异常）与 `ACT-W000`（降级提示：跳过结构/语义检查）——
+> 另有 `LLMR-E999`（校验器自身异常）与 `LLMR-W000`（降级提示：跳过结构/语义检查）——
 > 它们反映的是**工具自身状态**，不是 SWF 内容的问题。
-> 完整码目录与算法见 `ACT-校验器规格.md` §3 与 §6。
+> 完整码目录与算法见 `LLMR-校验器规格.md` §3 与 §6。
 
 > #### 为什么要有第 17 项
 >
@@ -572,11 +572,11 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 > **能在设计期说清的，不该留到运行期。**
 >
 > 顺带解决了第 7/8 项的一个诊断问题：环若**包含入口**，入口就必然不再唯一，
-> `ACT-E107` 会先响。只查可达子图、且无入口时查全图，用户才看得到**病因**而不是**症状**。
+> `LLMR-E107` 会先响。只查可达子图、且无入口时查全图，用户才看得到**病因**而不是**症状**。
 
 ### 13.4 结构性校验已可用
 
-`act.schema.json`（draft 2020-12）已覆盖结构约束，**ajv 实测通过**：
+`llmr.schema.json`（draft 2020-12）已覆盖结构约束，**ajv 实测通过**：
 
 ```
 VALID    verify/write_doc.swf.json                   exit 0
@@ -590,12 +590,12 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 
 ## 14. 生态与分发
 
-### 14.1 三条来源（全是人，**ACT 自己不造 SWF**）
+### 14.1 三条来源（全是人，**LLMR 自己不造 SWF**）
 
 | 来源 | 谁 | 机制 |
 |---|---|---|
-| **找我造** | ACT 作者 | 用户提 **issue** → 作者造 |
-| **自己写** | ACT **用户** | 用户用 AI 辅助 + 自己的编程知识写 |
+| **找我造** | LLMR 作者 | 用户提 **issue** → 作者造 |
+| **自己写** | LLMR **用户** | 用户用 AI 辅助 + 自己的编程知识写 |
 | **拷贝大佬的** | 第三方 | 直接拷 |
 
 ### 14.2 三条都指向同一个结论
@@ -656,32 +656,32 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 |---|---|
 | `workflow` 工具 | 脚本 + spawn-only + 无 per-stage prompt/工具表；SWF 是人工固定 + 硬编码条件边 + per-AMZ 固定 prompt/工具 |
 | `subagent` 工具 | 模型自主 tool use；AMZ 是**硬编码 step-to-step**——**方向相反** |
-| `compaction-basic` | 被动、会话内；ACT 是主动、跨容器 |
+| `compaction-basic` | 被动、会话内；LLMR 是主动、跨容器 |
 | `agentTeams` 契约 | 概念几乎 1:1，但**本机未装载** |
 
-> **决策**：**不依赖 `agentTeams`**，改用 `ctx.subagents.registerProvider` 注册 ACT 自己的 AMZ provider
+> **决策**：**不依赖 `agentTeams`**，改用 `ctx.subagents.registerProvider` 注册 LLMR 自己的 AMZ provider
 > （这样能在 spawn 时施加固定的 prompt / 工具 / 模型绑定）。保留"若官方 agentTeams 稳定则迁移"的注记。
 
-### C. 全新（ACT 真正要造的，很少）
+### C. 全新（LLMR 真正要造的，很少）
 
 1. **硬编码条件边求值器** —— 求值实现已有（`expression.cjs`，51 项测试）
 2. **执行器** —— 按图走、把每个 AMZ 落成 DSH 对话、记录轨迹
 3. **SWF 库 + TWF → SWF 晋升流程**
 4. **校验器** ✅ 已完成
 
-早期列为"全新"的项，按「**AMZ = DSH 对话**」重新归类后**都不是 ACT 要造的**：
+早期列为"全新"的项，按「**AMZ = DSH 对话**」重新归类后**都不是 LLMR 要造的**：
 
 | 早期列为"全新" | 现在 |
 |---|---|
 | 信息段库（项目级） | 用 DSH 的 `spillStore` / `attachments` / 文件引用 |
 | DIR | SWF 外的一个特殊 AMZ（即一个特殊 DSH 对话） |
-| 任务分级入口 | ACT 自己的一段提示词 |
+| 任务分级入口 | LLMR 自己的一段提示词 |
 | 按 SWF 切换的 UI 宿主 | 用 DSH 槽位 |
 | 专用工具盒 | 用 DSH 的工具与插件 |
 
 > ⚠ **一个仍待解决的问题**：DSH 里没有 Word / Excel / PPT 工具。
 > 若某个 SWF 需要"写 word 的 AMZ"，那份能力得先存在——
-> 但**造它不一定是 ACT 的责任**（可以是别的 DSH 插件）。
+> 但**造它不一定是 LLMR 的责任**（可以是别的 DSH 插件）。
 
 ---
 
@@ -689,9 +689,9 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 
 ### 16.1 形态
 
-**ACT = 常驻插件**（与 DET / DBS / TOPO 同档），**Host 半区 + Client 半区**：
+**LLMR = 常驻插件**（与 DET / DBS / TOPO 同档），**Host 半区 + Client 半区**：
 
-- **Host**：SWF 加载器、校验器、条件边求值器、信息段库、DIR、TWF、AMZ 的 subagent provider、`act_*` 工具
+- **Host**：SWF 加载器、校验器、条件边求值器、信息段库、DIR、TWF、AMZ 的 subagent provider、`llmr_*` 工具
 - **Client**：UI 宿主（`sidebar.panellist` + `main` keyed 面板）
 - 装载：`profiles/web/cordis.patch.yml` + 独立包（同 DET）
 
@@ -702,13 +702,13 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | **0** | **校验器** —— 加载 + 结构校验 + **17 项**语义检查 + 能力表面与审查哈希 | ✅ 完成（`tools/validator/`） |
-| **1** | **加载器** —— `$ref` 解析、defaults、`extends` 物化、导出内联、摘要 | ✅ 完成（`tools/act/loader.cjs`） |
+| **1** | **加载器** —— `$ref` 解析、defaults、`extends` 物化、导出内联、摘要 | ✅ 完成（`tools/llmr/loader.cjs`） |
 | **2** | **执行器** —— 条件边求值、选出边、执行后端、轨迹 | ✅ 完成（`executor.cjs` + `backends.cjs`） |
 | **2.5** | **暂停与恢复** —— 走到需要人拍板的地方停下来问，答完从那条边接着走 | ✅ 完成（见 §16.3） |
 | 3 | **在 DSH 内落地** —— `dsh` 后端：一个 AMZ = 一个 DSH 对话（preset / `tools.restrict` / spawn·fork） | 依赖 2 |
 | 4 | DIR + TWF + 晋升 | 依赖 3 |
 | 5 | SWF 库与生态（导入导出、审查、issue 流程） | 依赖 3 |
-| 6 | 分级入口（ACT 自己的一段提示词） | 依赖 3 |
+| 6 | 分级入口（LLMR 自己的一段提示词） | 依赖 3 |
 
 > 早期列过的「信息段库 / UI 宿主 / 专用工具盒」三个阶段**已移除**——
 > 按 §1 边界与 §15C，它们改用 DSH 的现成件（`spillStore` / `attachments` / 槽位 / 工具与插件）。
@@ -716,7 +716,7 @@ INVALID  verify/negative-csp-escalation.swf.json     exit 1
 ### 16.3 暂停与恢复（不新增结构）
 
 流程里总有「这一步得人点头」的地方（确认抽取到的作业信息、确认要不要覆盖文件）。
-ACT 用**已经存在**的 `output.signal` 通道表达它，**不动 schema**：
+LLMR 用**已经存在**的 `output.signal` 通道表达它，**不动 schema**：
 
 - AMZ 在 `output.signal.fields` 里声明 `ask: "text"`；
 - 执行到它时若报出了**非空**的 `signal.ask`，执行器在此停下，返回
@@ -750,14 +750,14 @@ UI 侧对应三件事：**把 AMZ 的正文当确认卡摆出来**（`paused` �
 PDF 里读不出题目 → `needs_input` 要材料。**注意每次运行都必然经过第 3 步的暂停**——
 这是设计，不是意外。
 
-证据：`tools/act/homework.smoke.cjs`（19 项，跑这份**真声明**而不是玩具图）；
-`tools/act/uidemo.cjs` 把真 CSS 与真渲染函数喂样例数据出静态页，用无头 Edge 看成图。
+证据：`tools/llmr/homework.smoke.cjs`（19 项，跑这份**真声明**而不是玩具图）；
+`tools/llmr/uidemo.cjs` 把真 CSS 与真渲染函数喂样例数据出静态页，用无头 Edge 看成图。
 
 ---
 
 ## 17. 默认决策表（11 项，**已确认 → schema 冻结为 v1.0**）
 
-> ✅ **用户已确认全部 11 项。`act.schema.json` 就此冻结为 v1.0。**
+> ✅ **用户已确认全部 11 项。`llmr.schema.json` 就此冻结为 v1.0。**
 >
 > 冻结的含义：结构约束不再变。若要改动，须三步——改本表 → 递增 schema 版本
 > → 重跑 `auditcodes.cjs` 与全部测试（`selftest` / `exprtest` / `fuzztest` / `schemfuzz`）。
@@ -793,7 +793,7 @@ PDF 里读不出题目 → `needs_input` 要材料。**注意每次运行都必�
 ## 19. 设计原则（贯穿全文）
 
 1. **固定优先**——SWF 固定、AMZ 固定、工具/权限静态绑定、UI 固定。
-   ACT 里唯一的"流动"是判定之前，唯一的例外是 TWF。
+   LLMR 里唯一的"流动"是判定之前，唯一的例外是 TWF。
 2. **隔离优先**——容器之间互不可见；隔离由"独立会话"结构性提供，不需额外机制。
 3. **硬编码优先于自主**——能用确定性规则就别用模型；能用固定边就别用 tool use。
 4. **避免干扰，对模型与用户同样成立**。
@@ -839,6 +839,6 @@ swf:
 
 | 文件 | 地位 |
 |---|---|
-| `act.schema.json` | **结构规范（normative）** |
-| `ACT-声明格式规格-02.md` | 语法与校验细则（companion） |
+| `llmr.schema.json` | **结构规范（normative）** |
+| `LLMR-声明格式规格-02.md` | 语法与校验细则（companion） |
 | `verify/` | 设计验证夹具（非正式校验器） |

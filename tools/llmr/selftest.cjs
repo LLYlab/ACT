@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// ACT 阶段 1 加载器自测
+// LLMR 阶段 1 加载器自测
 // 覆盖：$ref 解析 / defaults 应用 / extends 物化 / 导出内联 / 自包含性 / 与校验器的接续
 // 用法：node selftest.cjs
 
@@ -63,7 +63,7 @@ const DOC = {
   eq('$ref 标记 fromRef', r2.amzs[0].fromRef, true)
 
   const r3 = loader.resolveAmz([{ $ref: 'amz/nope' }], LIB)
-  eq('$ref 缺失 → ACT-E105', r3.problems.map((p) => p.code), ['ACT-E105'])
+  eq('$ref 缺失 → LLMR-E105', r3.problems.map((p) => p.code), ['LLMR-E105'])
   eq('$ref 缺失不产出 amz', r3.amzs.length, 0)
 
   const r4 = loader.resolveAmz([null, 42, 'x', []], {})
@@ -98,7 +98,7 @@ const DOC = {
   const p = loader.prepare(DOC, { library: {}, forExport: true })
   ok('缺库时导出报问题', Array.isArray(p.problems) && p.problems.length > 0)
   ok('报的是 E105/E112',
-    p.problems.every((x) => x.code === 'ACT-E105' || x.code === 'ACT-E112'),
+    p.problems.every((x) => x.code === 'LLMR-E105' || x.code === 'LLMR-E112'),
     JSON.stringify(p.problems))
 }
 
@@ -151,7 +151,7 @@ const DOC = {
   eq('从文件加载', p.swf.id, 'write_doc')
   eq('从文件加载无问题', p.problems, undefined)
   const bad = loader.prepare(path.join(__dirname, 'no_such_file.json'))
-  eq('文件不存在 → 报 E999', bad.problems.map((x) => x.code), ['ACT-E999'])
+  eq('文件不存在 → 报 E999', bad.problems.map((x) => x.code), ['LLMR-E999'])
 }
 
 console.log(`\n加载器: ${pass} 通过 / ${fail} 失败`)

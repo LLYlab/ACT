@@ -1,6 +1,6 @@
-# ACT 架构共识 · 第 02 版
+# LLMR 架构共识 · 第 02 版
 
-> 替代 `ACT-设计评审-01.md`（那一版里的"冻结尾 / 可调尾"提案已作废）。
+> 替代 `LLMR-设计评审-01.md`（那一版里的"冻结尾 / 可调尾"提案已作废）。
 > 本文只记录**已确认**的设计，未定的集中在最后一节。
 > "官方已有什么"的结论均来自 DSH 运行时实际契约查询，不是推测。
 
@@ -12,7 +12,7 @@
 用户
  │
  ▼
-[分级]  小 ──▶ 常规直跑（ACT 零介入）
+[分级]  小 ──▶ 常规直跑（LLMR 零介入）
         中 ──▶ 判任务性质（编程/办公/…）──▶ 适应性质的 UI
         大 ──▶ 先与用户多轮对话判性质 ──▶ 适应性质的 UI
  │
@@ -84,7 +84,7 @@ AMZ:  f(资料标号, 诉求) ──▶ 成品
 某几个**规划 AMZ 的输出可以激活** word 制造 AMZ——这是**上一步→下一步关系**，
 **不是**模型自主决定调用哪个工具。
 
-> 这是 ACT 与主流 agent 框架的**根本分歧**：别的框架在加自主性，ACT 在减。
+> 这是 LLMR 与主流 agent 框架的**根本分歧**：别的框架在加自主性，LLMR 在减。
 > 收益：可预测（不跑偏）、省 token（不用把工具表塞进上下文、不用反复推理"该调什么"）、
 > 可审计（整张图是数据，一眼看懂）、注意力集中（模型只干它那一步）。
 
@@ -150,15 +150,15 @@ AMZ:  固定 SystemPrompt + 按标号内联的段 + 诉求 ──▶ 成品
 > **UI 落点已确定**：不要 shadow `sidebar` / `sidebar.workspaces`（都是 `shadows-shipped-ui`，
 > 且 `sidebar.workspaces` 就是**会话列表本体**，换掉它等于砍掉 DSH 主导航）。
 > 正确姿势：`sidebar.panellist` 放图标 → `main` 的 keyed 面板承载 AGT/WFW/DIR/WPC。
-> **`conversation.chat.node` 的 `user` 键已被 DET 占用**，ACT 别抢。
+> **`conversation.chat.node` 的 `user` 键已被 DET 占用**，LLMR 别抢。
 
 ### B. 必须差异化（有官方件，但语义不同）
 
-| 官方件 | 与 ACT 的差异 |
+| 官方件 | 与 LLMR 的差异 |
 |---|---|
 | `workflow` 工具 | 它是**脚本 + spawn-only + 无 per-stage prompt/工具表**；SWF 是**人工固定 + 硬编码条件边 + per-AMZ 固定 prompt/工具** |
 | `subagent` 工具 | 它是**模型自主 tool use**；AMZ 是**硬编码 step-to-step**——**方向相反** |
-| `compaction-basic` | 它是**被动、会话内**；ACT 是**主动、跨容器** |
+| `compaction-basic` | 它是**被动、会话内**；LLMR 是**主动、跨容器** |
 | `agentTeams` 契约 | 概念几乎 1:1（见下），但**本机未装载** |
 
 > **`agentTeams` 是最大的潜在复用/冲突点。** 契约里 `spawnTeammate(context:'fresh'\|'fork')`

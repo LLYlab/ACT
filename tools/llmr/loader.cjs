@@ -1,5 +1,5 @@
 'use strict'
-// ACT 阶段 1：加载器
+// LLMR 阶段 1：加载器
 //
 // 职责：文件 → 内存中规范化的 SWF。只读，不改任何东西。
 //   ① 读声明（JSON / YAML）与 AMZ 库
@@ -87,14 +87,14 @@ function resolveAmz (entries, library) {
   asArray(entries).forEach((e, i) => {
     const p = `/swf/amz/${i}`
     if (!e || typeof e !== 'object' || Array.isArray(e)) {
-      problems.push({ path: p, code: 'ACT-E105', message: `AMZ 项不是对象：${String(JSON.stringify(e)).slice(0, 40)}` })
+      problems.push({ path: p, code: 'LLMR-E105', message: `AMZ 项不是对象：${String(JSON.stringify(e)).slice(0, 40)}` })
       return
     }
     if (typeof e.$ref === 'string') {
       const key = e.$ref.replace(/^amz\//, '')
       const target = lib[key]
       if (!target) {
-        problems.push({ path: `${p}/$ref`, code: 'ACT-E105', message: `引用的 AMZ 不存在：${e.$ref}`, hint: '确认 AMZ 库里有这个 id，或就地内联定义' })
+        problems.push({ path: `${p}/$ref`, code: 'LLMR-E105', message: `引用的 AMZ 不存在：${e.$ref}`, hint: '确认 AMZ 库里有这个 id，或就地内联定义' })
         return
       }
       amzs.push({ id: target.id, amz: target, path: p, fromRef: true })
@@ -142,7 +142,7 @@ function materializeExtends (swf, library) {
     const key = e.extends.replace(/^amz\//, '')
     const base = lib[key]
     if (!base) {
-      problems.push({ path: `${p}/extends`, code: 'ACT-E105', message: `extends 引用的基座 AMZ 不存在：${e.extends}` })
+      problems.push({ path: `${p}/extends`, code: 'LLMR-E105', message: `extends 引用的基座 AMZ 不存在：${e.extends}` })
       return e
     }
     const merged = { ...base, ...e }
@@ -166,7 +166,7 @@ function inlineRefs (swf, library) {
     const key = e.$ref.replace(/^amz\//, '')
     const target = lib[key]
     if (!target) {
-      problems.push({ path: `/swf/amz/${i}/$ref`, code: 'ACT-E112', message: `导出失败：引用的 AMZ 不存在 ${e.$ref}` })
+      problems.push({ path: `/swf/amz/${i}/$ref`, code: 'LLMR-E112', message: `导出失败：引用的 AMZ 不存在 ${e.$ref}` })
       return e
     }
     return JSON.parse(JSON.stringify(target))
@@ -185,7 +185,7 @@ function prepare (source, opts = {}) {
 
   let doc
   if (typeof source === 'string') {
-    try { doc = readDecl(source) } catch (e) { return { problems: [{ path: '/', code: 'ACT-E999', message: `无法读取声明：${e.message}` }] } }
+    try { doc = readDecl(source) } catch (e) { return { problems: [{ path: '/', code: 'LLMR-E999', message: `无法读取声明：${e.message}` }] } }
   } else {
     doc = source
   }

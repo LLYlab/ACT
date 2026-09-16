@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict'
-// ACT WebUI —— ACT 自己的前端，**不依赖 DSH**。
+// LLMR WebUI —— LLMR 自己的前端，**不依赖 DSH**。
 //
-// ACT 的前端与后端都能独立运行：
+// LLMR 的前端与后端都能独立运行：
 //   后端 = validator / loader / executor / backends（纯 Node）
 //   前端 = 本文件提供的页面 + JSON 接口
 // DSH 插件只是「接入方式之一」，不是必需。
 //
-// 用法：node server.cjs [--port=8735] [--dir=…/verify] [--root=…/ACT]
+// 用法：node server.cjs [--port=8735] [--dir=…/verify] [--root=…/LLMR]
 //
 // 安全：只绑 127.0.0.1；只允许访问 --root 之下的路径；
 //       默认后端是 echo（不产生任何模型花费）。真模型走 http 后端，凭据在「设置 → 模型 API」里配。
@@ -241,7 +241,7 @@ const server = http.createServer(async (req, res) => {
 })
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log('ACT WebUI  http://127.0.0.1:' + PORT + '/')
+  console.log('LLMR WebUI  http://127.0.0.1:' + PORT + '/')
   console.log('目录: ' + DIR)
   console.log('根:   ' + ROOT)
   console.log('真模型后端: ' + (store.getSettings().model.apiKey ? '已配置 Key' : '无 Key（只有 echo）'))

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// ACT 执行器 · 命令行 —— 它就是一个程序
+// LLMR 执行器 · 命令行 —— 它就是一个程序
 //
 // 用法：
 //   node run.cjs <swf> [--lib=dir] [--backend=echo|http|dsh]
@@ -110,7 +110,7 @@ async function main () {
   if (args.json) {
     console.log(JSON.stringify({ ok: r.ok, status: r.status, reason: r.reason, steps: r.trace.length, trace: r.trace, finalOutput: r.finalOutput }, null, 2))
   } else {
-    console.log('ACT 运行')
+    console.log('LLMR 运行')
     console.log(`源: ${target}`)
     console.log(`后端: ${backend.name}`)
     console.log(`入口: ${r.trace.length ? r.trace[0].amz : '(未知)'}`)

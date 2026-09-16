@@ -8,7 +8,7 @@
 // 所以看到的就是用户会看到的那一套。
 //
 // 用法：
-//   node tools/act/uidemo.cjs          # 生成 _shot/ui-pause.html 与 _shot/ui-result.html
+//   node tools/llmr/uidemo.cjs          # 生成 _shot/ui-pause.html 与 _shot/ui-result.html
 //   （再用 dlt_run edge-headless 渲染成 PNG）
 
 const fs = require('fs')
@@ -19,19 +19,26 @@ const OUT = path.resolve(__dirname, '..', '..', '_shot')
 
 const A = {
   id: 'demo', name: '作业成品',
-  swf: 'C:\\Users\\L2959\\Desktop\\项目\\ACT\\swfs\\homework.swf.json',
+  swf: 'C:\\Users\\L2959\\Desktop\\项目\\LLMR\\swfs\\homework.swf.json',
 }
-const VIEW = {
-  swf: {
-    id: 'homework', version: 2, title: '作业成品流水线',
-    invoke: {
-      when: '用户说「这是这周的作业」并把老师发的那段（或作业单）给你：先判断是不是作业任务，抽信息跟他对一遍，再读 PDF、做成品、直接显示在页面上',
-      tags: ['作业', '习题', 'homework', 'assignment', '题解', '解答', '翻译', '排版', 'PDF', 'Word', '数学'],
-      args: [
-        { name: 'pdf', type: 'text' }, { name: 'course', type: 'text' }, { name: 'refs', type: 'refs' },
-      ],
-    },
-  },
+// 读**真实声明**，不手写样例——手写的那份缺 amz/order，图画不出来，
+// 而且会和真 SWF 越飘越远。
+const SWF_FILE = path.resolve(__dirname, '..', '..', 'swfs', 'homework.swf.json')
+const loader = require('./loader.cjs')
+const { runChecks, surfaceHash } = require('../validator/checks.cjs')
+
+// 视图数据**真算一遍**（加载器 + 校验器），不手写。
+// 手写的样例迟早和实现飘开——而且飘了没人知道。
+const PREPARED = loader.prepare(SWF_FILE)
+const CHECKED = runChecks(PREPARED.swf, {})
+const VIEW = { swf: PREPARED.swf }
+const DEV_VIEW = {
+  swf: PREPARED.swf,
+  path: SWF_FILE,
+  errors: CHECKED.errors || [],
+  warnings: CHECKED.warnings || [],
+  surface: CHECKED.surface || [],
+  surfaceHash: surfaceHash(CHECKED.surface || []),
 }
 
 const CARD = [
@@ -43,10 +50,12 @@ const CARD = [
   '我理解得对吗？路径不对的话，把正确的给我。',
 ].join('\n')
 
-const TRACE = ['judge_task', 'extract_info', 'confirm_homework'].map((amz, i) => ({
-  amz, to: ['extract_info', 'confirm_homework', 'read_pdf'][i],
-  via: i === 2 ? 'pause' : 'when',
-}))
+// 真实跑一遍会得到**两段**轨迹：确认前 3 步 + 恢复后 8 步。这里按拼接后的样子出图。
+const TRACE = [
+  { amz: 'judge_task', to: 'extract_info', via: 'when' },
+  { amz: 'extract_info', to: 'confirm_homework', via: 'when' },
+  { amz: 'confirm_homework', to: 'read_pdf', via: 'pause' },
+]
 
 const RESULT = [
   'MATH2201.01 · Homework 2',
@@ -80,22 +89,35 @@ function bootstrap (call, opts) {
     "  // ── 样例（uidemo.cjs 注入，只存在于生成出来的静态页里）──",
     // 门面图用 http 后端跑一遍：这样「仅 echo 干跑用」的样例输出框不会出现在图里，
     // 截出来的就是**配好 Key 之后**用户看到的那一屏。
-    '  S.mode = "user"; S.settings = { backend: ' + JSON.stringify(o.backend || 'echo') + ' }',
+    '  S.mode = ' + JSON.stringify(o.dev ? 'dev' : 'user') +
+      '; S.settings = { backend: ' + JSON.stringify(o.backend || 'echo') + ' }',
     '  S.agts = []; S.agts.push(' + JSON.stringify(A) + ')',
-    '  S.agt = ' + JSON.stringify(A) + '; S.view = ' + JSON.stringify(VIEW),
-    '  paint()',
   ]
+  if (o.dev) {
+    // 开发者视图：侧栏是 SWF 列表，主区是校验 + 调用图 + AMZ 表 + 能力表面
+    // ⚠ 路径要**字面量**注进去。写成裸的 SWF_FILE 是 Node 侧的常量，
+    //   浏览器里没有这个名字，整段 bootstrap 会 ReferenceError → 白屏。
+    const p = JSON.stringify(SWF_FILE)
+    lines.push('  S.list = { swfs: [{ name: "homework.swf.json", path: ' + p + ' }], amz: [] }')
+    lines.push('  S.swfPath = ' + p + '; S.view = ' + JSON.stringify(DEV_VIEW))
+  } else {
+    lines.push('  S.agt = ' + JSON.stringify(A) + '; S.view = ' + JSON.stringify(VIEW))
+  }
+  lines.push('  paint()')
   // 首屏那张要**摊开**的表单：README 的门面图得让人看清"你要给它什么"
   if (o.fold) {
-    lines.push('  foldCard(' + JSON.stringify({ goal: GOAL, pdf: 'C:\\Users\\L2959\\Desktop\\项目\\ACT\\_shot\\hw4.pdf' }) + ')')
+    lines.push('  foldCard(' + JSON.stringify({ goal: GOAL, pdf: path.join(OUT, 'hw4.pdf') }) + ')')
   }
   if (call) lines.push(call)
+  lines.push('  finishGraphAnimation()')
   return lines.join('\n')
 }
 
 const cases = {
   // 首屏：AGT 打开、表单还摊着的样子（README 的门面图）
   'ui-home.html': bootstrap('', { backend: 'http' }),
+  // 开发者视图：校验 + 调用图 + AMZ 表 + 能力表面（DEV_VIEW 是真跑校验器算出来的）
+  'ui-dev.html': bootstrap('', { dev: true }),
   'ui-pause.html': bootstrap(
     '  paintPause(' + JSON.stringify({
       finalOutput: CARD,
@@ -104,7 +126,7 @@ const cases = {
     }) + ')', { fold: true }),
   'ui-result.html': bootstrap(
     '  paintResult(' + JSON.stringify({
-      ok: true, status: 'completed', steps: 8, finalOutput: RESULT, trace: RESULT_TRACE,
+      ok: true, status: 'completed', steps: 8, finalOutput: RESULT, trace: TRACE.concat(RESULT_TRACE),
     }) + ')', { fold: true }),
 }
 

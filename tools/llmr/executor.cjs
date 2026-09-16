@@ -1,7 +1,7 @@
 'use strict'
-// ACT 执行器：按 SWF 声明走图，把每个 AMZ 交给一个 backend 执行
+// LLMR 执行器：按 SWF 声明走图，把每个 AMZ 交给一个 backend 执行
 //
-// 语义依据 ACT-设计规格.md：
+// 语义依据 LLMR-设计规格.md：
 //   §6.2  边是硬编码的；有分支的边组必须有 else
 //   §9.3  判断边的确定性变量：artifact.* / run.* / args.*
 //   §9.4  求值失败（缺字段/类型不符）→ **走 else**，不中止

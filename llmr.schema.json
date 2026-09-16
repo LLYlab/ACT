@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://act.dsh/schema/swf-1.0.json",
-  "title": "ACT SWF Declaration v1.0",
-  "x-act-schema-version": "1.0",
-  "x-act-status": "frozen — 11 项默认决策已由用户确认（见 ACT-设计规格.md §17）",
-  "$comment": "ACT 声明格式规格 02 的机器可读版。结构校验用本 schema；语义校验（17 项检查，见 ACT-声明格式规格-02.md §8）由 ACT 校验器实现——尤其是 #4/#15 需要解析 when 表达式，JSON Schema 表达不了。",
+  "$id": "https://llmr.dsh/schema/swf-1.0.json",
+  "title": "LLMR SWF Declaration v1.0",
+  "x-llmr-schema-version": "1.0",
+  "x-llmr-status": "frozen — 11 项默认决策已由用户确认（见 LLMR-设计规格.md §17）",
+  "$comment": "LLMR 声明格式规格 02 的机器可读版。结构校验用本 schema；语义校验（17 项检查，见 LLMR-声明格式规格-02.md §8）由 LLMR 校验器实现——尤其是 #4/#15 需要解析 when 表达式，JSON Schema 表达不了。",
   "type": "object",
   "required": ["swf"],
   "additionalProperties": false,
@@ -261,7 +261,7 @@
         "to": { "$ref": "#/$defs/id" },
         "when": {
           "type": "string",
-          "$comment": "文法见规格 02 §5.4。真正的文法校验由 ACT 校验器做，JSON Schema 只做粗筛。"
+          "$comment": "文法见规格 02 §5.4。真正的文法校验由 LLMR 校验器做，JSON Schema 只做粗筛。"
         },
         "level": {
           "enum": [1, 2, 3, 4],

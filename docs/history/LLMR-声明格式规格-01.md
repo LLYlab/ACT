@@ -1,7 +1,7 @@
-# ACT 声明格式规格 01
+# LLMR 声明格式规格 01
 
 > 阶段 0（校验器）的前置件：**SWF / AMZ 的正式声明语法**。
-> 依据：`ACT-设计规格-v1.md` §4 §5 §8 §10。
+> 依据：`LLMR-设计规格-v1.md` §4 §5 §8 §10。
 > 本文中的"官方契约"均来自 DSH 运行时实际查询。
 
 ---
@@ -36,7 +36,7 @@
 
 ## 2. 权限：`permits` 不作为独立字段（重要修正）
 
-`ACT-设计规格-v1.md` §4.3 里我暂列了 `permits` 字段。查证官方契约后，**建议取消它**。
+`LLMR-设计规格-v1.md` §4.3 里我暂列了 `permits` 字段。查证官方契约后，**建议取消它**。
 
 ### 官方契约（`tools` 服务，实查）
 
@@ -62,7 +62,7 @@ ToolRestriction = { allow?: readonly string[]; deny?: readonly string[] }
    → 所以"AMZ 与工具+权限绑定"里的**权限，是工具表的函数**，不是并列的第二样东西。
 
 2. **`guard` 是单调的**——"no guard can force-allow a call another guard denied"。
-   这对 WPC 是个极好的性质：**ACT 给某个 AMZ 加的守卫只能收紧、不能放松别人的拒绝**。
+   这对 WPC 是个极好的性质：**LLMR 给某个 AMZ 加的守卫只能收紧、不能放松别人的拒绝**。
    即使某个 AMZ 的守卫写错了，也**不可能提权**。
 
 3. **`restrict` 只看得到全局工具**——"Restrictions intersect; **scoped registrations remain visible**"。
@@ -233,7 +233,7 @@ array   := '[' (literal (',' literal)*)? ']'
 ## 6. 转码器（全局注册 + 局部声明）
 
 ```yaml
-# 全局注册（ACT 配置，不是 SWF 文件的一部分）
+# 全局注册（LLMR 配置，不是 SWF 文件的一部分）
 transcoder:
   rule: deterministic
   weak: { model: deepseek-v4-flash, prompt: "把以下内容抽成 JSON：…" }
@@ -305,12 +305,12 @@ SWF 里只写 `encoder: weak`，**不写 weak 是什么**。要覆盖时才内�
 2. **`step` 的 `from` 指什么？** 我暂写成 `<amz-id | session-ref>`。
    但"复制之前模型端点"——端点是**AMZ 的完成态**，还是**任意会话位置**（`sessions.fork(source, boundary)` 支持任意 seq）？两者实现不同。
 
-3. **`ui.page` 的合法值从哪来？** 需要 ACT 维护一个"页面组注册表"。
+3. **`ui.page` 的合法值从哪来？** 需要 LLMR 维护一个"页面组注册表"。
    目前只有 `[AGT, WFW, DIR, WPC]` 一组，是不是就这一组？还是 SWF 可以自定义页面组？
 
 4. **级 1 的 `rule` 怎么被真正求值？** 我写了 `rule: "上一步产物类型为 text"`（自然语言），
    但§8.3 要求"禁止模型参与求值"。所以级 1 的规则必须是**可执行的结构化形式**，
-   还是说它只是给人/审查者读的注释，实际求值由 ACT 内置判定器做？
+   还是说它只是给人/审查者读的注释，实际求值由 LLMR 内置判定器做？
    → **这条影响判断边求值器的实现，需要你定。**
 
 ---

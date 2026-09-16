@@ -1,5 +1,5 @@
-// ACT 设计验证夹具 —— 不是阶段 0 的正式校验器。
-// 目的：证明 act.schema.json 可用、且关键的 CSP_AMZ 约束真的会拦人。
+// LLMR 设计验证夹具 —— 不是阶段 0 的正式校验器。
+// 目的：证明 llmr.schema.json 可用、且关键的 CSP_AMZ 约束真的会拦人。
 // 用法：node check.cjs <schema.json> <fixture.json>
 'use strict'
 

@@ -15,7 +15,7 @@ const path = require('node:path')
 const { CHECKS } = require('./checks.cjs')
 
 const ROOT = path.join(__dirname, '..', '..')
-const RE = /ACT-[EW]\d{3}/g
+const RE = /LLMR-[EW]\d{3}/g
 
 const readDoc = (rel) => {
   const abs = path.join(ROOT, rel)
@@ -37,8 +37,8 @@ for (const f of implFiles) {
 }
 
 const specs = {
-  'ACT-校验器规格.md': codesOf('ACT-校验器规格.md'),
-  'ACT-设计规格.md': codesOf('ACT-设计规格.md'),
+  'LLMR-校验器规格.md': codesOf('LLMR-校验器规格.md'),
+  'LLMR-设计规格.md': codesOf('LLMR-设计规格.md'),
 }
 
 let bad = 0
@@ -71,7 +71,7 @@ console.log(`实现 ${N} 项检查 · 来源 checks.cjs 的 CHECKS`)
 //     （反过来也查：实现里出现、CHECKS 没登记 → 有人加了检查却忘了登记）
 const listed = new Set()
 for (const c of CHECKS) for (const code of c.codes) listed.add(code)
-const structOnly = new Set(['ACT-E001', 'ACT-E999', 'ACT-W000']) // 结构 / 工具自身状态，不属语义项
+const structOnly = new Set(['LLMR-E001', 'LLMR-E999', 'LLMR-W000']) // 结构 / 工具自身状态，不属语义项
 const semImpl = new Set([...impl].filter((c) => !structOnly.has(c)))
 {
   const missing = [...semImpl].filter((c) => !listed.has(c))
@@ -88,15 +88,15 @@ const semImpl = new Set([...impl].filter((c) => !structOnly.has(c)))
 
 // (2) 设计规格 §13.3 的检查表，行数必须等于 N
 {
-  const s = readDoc('ACT-设计规格.md')
+  const s = readDoc('LLMR-设计规格.md')
   const sec = s && s.split('### 13.3')[1]
   const rows = sec ? (sec.split(/\n### /)[0].match(/^\|\s*(\d+)\s*\|/gm) || []) : []
   const nums = rows.map((r) => Number(r.replace(/[^\d]/g, '')))
   if (nums.length === N && nums.every((n, i) => n === i + 1)) {
-    console.log(`✓ ACT-设计规格.md §13.3  ${N} 行，编号连续`)
+    console.log(`✓ LLMR-设计规格.md §13.3  ${N} 行，编号连续`)
   } else {
     bad++
-    console.log(`✗ ACT-设计规格.md §13.3  表里 ${nums.length} 行（应为 ${N}），编号：${nums.join(',') || '(解析不到)'}`)
+    console.log(`✗ LLMR-设计规格.md §13.3  表里 ${nums.length} 行（应为 ${N}），编号：${nums.join(',') || '(解析不到)'}`)
   }
 }
 

@@ -1,6 +1,6 @@
-# ACT 声明格式规格 02
+# LLMR 声明格式规格 02
 
-> 取代 `ACT-声明格式规格-01.md`。
+> 取代 `LLMR-声明格式规格-01.md`。
 > 本版两处实质推进：**① 级 1 判断的文法统一（修掉 01 的一个真实缺陷）**；
 > **② 01 §9 的四个开放问题给出默认解**。另附完整示例。
 
@@ -32,7 +32,7 @@ guard(fn)         "monotonic guard … NO GUARD CAN FORCE-ALLOW a call another g
 
 1. **权限粒度 = 工具名可见性。** DSH **没有 per-tool 权限原子**。
    → 「AMZ 与工具+权限绑定」里的权限**是工具表的函数**，不是并列的第二样东西。
-2. **`guard` 单调**——ACT 给 AMZ 加的守卫只能收紧、不能放松。**即使写错也不可能提权。**
+2. **`guard` 单调**——LLMR 给 AMZ 加的守卫只能收紧、不能放松。**即使写错也不可能提权。**
 3. **AMZ 可见工具集** = `该 AMZ scope 内注册的工具` ∪ `(全局工具 ∩ restrict)`。
 
 **编译规则**：
@@ -194,7 +194,7 @@ literal := number | string | bool | array
 ## 6. 转码器（全局注册 + 局部声明）
 
 ```yaml
-# 全局注册（ACT 配置，不属于 SWF 文件）
+# 全局注册（LLMR 配置，不属于 SWF 文件）
 transcoder:
   rule: deterministic
   weak: { model: deepseek-v4-flash, prompt: "把以下内容抽成 JSON：…" }
@@ -345,7 +345,7 @@ swf:
 
 ## 11. 进度与下一步
 
-- [x] 产出机器可读 JSON Schema → `act.schema.json`（ajv draft 2020-12 实测通过）
+- [x] 产出机器可读 JSON Schema → `llmr.schema.json`（ajv draft 2020-12 实测通过）
 - [x] 建立验证夹具 → `verify/`（正例通过、CSP 越权负例被拒）
 - [ ] 用户确认 §10 的四个默认 + 两个挂账默认
 - [ ] 实现校验器（阶段 0），以 `verify/write_doc.swf.json` 为首个测试用例

@@ -1,13 +1,13 @@
 'use strict'
-// ACT 视图层：把声明整成「前端要的东西」。
+// LLMR 视图层：把声明整成「前端要的东西」。
 //
-// ACT 的前端与后端都能独立运行。这是**任何前端都该走的唯一入口**：
-//   · ACT 自己的 WebUI（server.cjs）
+// LLMR 的前端与后端都能独立运行。这是**任何前端都该走的唯一入口**：
+//   · LLMR 自己的 WebUI（server.cjs）
 //   · DSH 插件
 //   · CI / 脚本
 //
 // 产出 = 有效 SWF（defaults 已应用、$ref 已解析、extends 已物化）+ 能力表面 + 校验结果。
-// 这样前端不需要复制任何 ACT 语义。
+// 这样前端不需要复制任何 LLMR 语义。
 
 const fs = require('node:fs')
 const path = require('node:path')
@@ -40,7 +40,7 @@ function indexOf (dir) {
 /**
  * 按用户那句话去匹配一张 SWF。
  *
- * ⚠ 这是**关键词匹配**，不是理解。ACT 设计里这一步归 DIR（见 §8），
+ * ⚠ 这是**关键词匹配**，不是理解。LLMR 设计里这一步归 DIR（见 §8），
  * 现在用一个朴素打分先撑住交互；DIR 做出来之后由它接手。
  * 打分：标签整体出现权重高；再按 2-gram 重合度加分。
  */

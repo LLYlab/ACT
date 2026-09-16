@@ -1,10 +1,10 @@
 'use strict'
-// ACT 持久化：AGT 实例 与 设置
+// LLMR 持久化：AGT 实例 与 设置
 //
 // AGT = 用户面对的那个「角色」：一个有名字的实例，绑定一张 SWF。
 //   用户模式只看到 AGT；SWF / 图 / 能力表面属于开发者模式。
 //
-// 两个文件都写在 ACT 根目录下：agts.json / settings.json。
+// 两个文件都写在 LLMR 根目录下：agts.json / settings.json。
 
 const fs = require('node:fs')
 const path = require('node:path')

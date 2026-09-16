@@ -1,7 +1,7 @@
-# ACT 校验器规格
+# LLMR 校验器规格
 
-> 阶段 0 的实现依据。把 `ACT-设计规格.md` §13 的十七项检查从表格变成可实现的算法。
-> 本文同时修掉 `ACT-设计规格.md` 里一处**不可计算**的检查（见 §3 #1）。
+> 阶段 0 的实现依据。把 `LLMR-设计规格.md` §13 的十七项检查从表格变成可实现的算法。
+> 本文同时修掉 `LLMR-设计规格.md` 里一处**不可计算**的检查（见 §3 #1）。
 
 ---
 
@@ -23,7 +23,7 @@
 
 ```ts
 interface Report {
-  code: string          // ACT-E1xx / ACT-W2xx
+  code: string          // LLMR-E1xx / LLMR-W2xx
   path: string          // JSON Pointer，如 /swf/amz/2/tools
   message: string
   hint?: string         // 修法建议
@@ -36,12 +36,12 @@ interface Report {
 
 ```
 [1] 加载      YAML → JSON value；解析 $ref（author/export 模式）
-[2] 结构校验  JSON Schema（act.schema.json，ajv 2020-12）  → ACT-E001
-[3] 语义校验  17 项（本文 §3）                             → ACT-E1xx / ACT-W2xx
+[2] 结构校验  JSON Schema（llmr.schema.json，ajv 2020-12）  → LLMR-E001
+[3] 语义校验  17 项（本文 §3）                             → LLMR-E1xx / LLMR-W2xx
 [4] 产出      能力表面 + 图 +（export 模式）surfaceHash
 ```
 
-**阶段 2 已可用**：`act.schema.json` 经 ajv 实测通过（见 `verify/`）。
+**阶段 2 已可用**：`llmr.schema.json` 经 ajv 实测通过（见 `verify/`）。
 阶段 3 是本规格的重点。
 
 > 阶段 2 失败即中止——结构不合法时继续做语义分析只会产生噪音。
@@ -57,7 +57,7 @@ interface Report {
 
 **改为两个可计算的代理检查**，而且它们直接对应真正的安全风险（§11 的 CSP 前提）：
 
-ACT 维护一张**工具类别表**（由工具声明提供，或内置已知工具的分类）：
+LLMR 维护一张**工具类别表**（由工具声明提供，或内置已知工具的分类）：
 
 | 类别 | 例 |
 |---|---|
@@ -68,10 +68,10 @@ ACT 维护一张**工具类别表**（由工具声明提供，或内置已知工
 | `read` | `read`、`glob`、`grep` |
 
 ```
-ACT-W201 (警告)  某 AMZ 含 exec 类工具
+LLMR-W201 (警告)  某 AMZ 含 exec 类工具
                  → "会话 sandbox 不是 per-AMZ 的，该 AMZ 继承的是整个会话的 sandbox 模式"
 
-ACT-W206 (警告)  某 AMZ 同时含 exec 类与 artifact 类工具
+LLMR-W206 (警告)  某 AMZ 同时含 exec 类与 artifact 类工具
                  → "CSP 保证被削弱：TWF 虽不提权，但一句被改过的 prompt
                     就能让这个盒子用 exec 工具做设计者没打算的事"
 ```
@@ -79,20 +79,20 @@ ACT-W206 (警告)  某 AMZ 同时含 exec 类与 artifact 类工具
 **理由**：CSP_AMZ 的安全性完全押在"工具面足够窄"上。
 一个同时能 `docx_write` 和 `pwsh` 的盒子，即使权限没变，也已经是"越权使用"的温床。
 
-### #2 分支边组必须有 `else`（**ACT-E101 / E102**）
+### #2 分支边组必须有 `else`（**LLMR-E101 / E102**）
 
 ```
 按 edge.from 分组：
-  组内 size > 1 且 无任何成员带 else   → ACT-E101（错误）
-  组内带 else 的成员数 > 1             → ACT-E102（错误，兜底歧义）
+  组内 size > 1 且 无任何成员带 else   → LLMR-E101（错误）
+  组内带 else 的成员数 > 1             → LLMR-E102（错误，兜底歧义）
   组内 size == 1 且带 else             → 允许（等价于无条件兜底）
 ```
 
-### #3 `when` 文法合法且标明 `level`（**ACT-E103** ＋ schema 覆盖）
+### #3 `when` 文法合法且标明 `level`（**LLMR-E103** ＋ schema 覆盖）
 
 ```
-expr.parse(edge.when) 抛 ParseError            → ACT-E103（文法非法）
-edge.level 缺失或不在 {1,2,3,4}                → 由 schema 覆盖（ACT-E001）
+expr.parse(edge.when) 抛 ParseError            → LLMR-E103（文法非法）
+edge.level 缺失或不在 {1,2,3,4}                → 由 schema 覆盖（LLMR-E001）
 ```
 
 原编号 #3 只写了"标明 `level`"，但 `level` 是 schema 的 required 字段——
@@ -101,15 +101,15 @@ edge.level 缺失或不在 {1,2,3,4}                → 由 schema 覆盖（ACT-
 
 本版把 #3 定为"**可解析 + 有级别**"，`E103` 归位，schema 部分仍由 `E001` 覆盖。
 
-### #4 `level >= 2` 但只用确定性变量（**ACT-W202**）
+### #4 `level >= 2` 但只用确定性变量（**LLMR-W202**）
 
 ```
 ns = namespacesOf(parse(when))          // {signal, artifact, run, args} 的子集
-若 level >= 2 且 ns ⊆ {artifact, run, args}  → ACT-W202
+若 level >= 2 且 ns ⊆ {artifact, run, args}  → LLMR-W202
    hint: "该判断只用到确定性信息，可降为 level: 1（零成本）"
 ```
 
-### #5 引用存在性（**ACT-E105**）
+### #5 引用存在性（**LLMR-E105**）
 
 | 引用 | 检查 |
 |---|---|
@@ -120,7 +120,7 @@ ns = namespacesOf(parse(when))          // {signal, artifact, run, args} 的子�
 
 > 工具注册表快照来自 `tools.schemas()`（全局视图）。
 
-### #6 `signal` 字段一致性（**ACT-E106**）
+### #6 `signal` 字段一致性（**LLMR-E106**）
 
 ```
 对每条 level ∈ {2,3,4} 的边：
@@ -130,22 +130,22 @@ ns = namespacesOf(parse(when))          // {signal, artifact, run, args} 的子�
      若 typeof(f) 与字面量类型不符（如 signal.n > 5 但 n 是 bool） → E106（类型不符）
 ```
 
-### #7 可达性（**ACT-W203 / E107**）
+### #7 可达性（**LLMR-W203 / E107**）
 
 ```
 入口 = 所有 edge.from 中「从未作为 edge.to 或 edge.else 出现」的节点
-  入口数 != 1  → ACT-E107（入口不唯一）
-BFS 从入口出发，未访问到的 AMZ  → ACT-W203（不可达）
+  入口数 != 1  → LLMR-E107（入口不唯一）
+BFS 从入口出发，未访问到的 AMZ  → LLMR-W203（不可达）
 ```
 
-### #8 终态一致性（**ACT-E108 / W204**）
+### #8 终态一致性（**LLMR-E108 / W204**）
 
 ```
-无出边（不是任何 edge.from，也不是任何 else 目标）且不在 terminal → ACT-E108
-在 terminal 中但有出边                                          → ACT-W204
+无出边（不是任何 edge.from，也不是任何 else 目标）且不在 terminal → LLMR-E108
+在 terminal 中但有出边                                          → LLMR-W204
 ```
 
-### #9 导入复核（**ACT-E109，仅 import 模式**）
+### #9 导入复核（**LLMR-E109，仅 import 模式**）
 
 **防篡改设计**（本规格新增）：
 
@@ -158,15 +158,15 @@ _review:
 
 ```
 import 模式下：
-  顶层无 _review                       → ACT-E109（未经复核）
-  _review.surfaceHash != 当前表面哈希   → ACT-E109（导出后被改动过）
+  顶层无 _review                       → LLMR-E109（未经复核）
+  _review.surfaceHash != 当前表面哈希   → LLMR-E109（导出后被改动过）
 ```
 
 > 这把"人工过目"从**口头承诺**变成**可校验的凭据**：
 > 审查后若有人改了 `tools`，哈希对不上，导入被拒。
 > 审查对象是**能力表面**（§11），不是 prompt——改 prompt 不影响哈希，符合设计意图。
 
-### #10 `step` 的缓存提示（**ACT-W205**）
+### #10 `step` 的缓存提示（**LLMR-W205**）
 
 ```
 若 SWF 中存在任何 kind == "step" 的 AMZ → 汇总一条 W205：
@@ -180,21 +180,21 @@ import 模式下：
 
 `extends` 存在时禁 `tools`/`guards`/`model` → schema 已强制，**ajv 实测拒绝通过**。
 
-### #12 AMZ id 冲突（**ACT-E110**）
+### #12 AMZ id 冲突（**LLMR-E110**）
 
 收集所有 AMZ id（含 `$ref` 解析后的目标 id），重复 → 错误。
 
-### #13 有分支出边但无 `output.signal`（**ACT-E111**）
+### #13 有分支出边但无 `output.signal`（**LLMR-E111**）
 
 ```
 若某 AMZ 是任何 level ∈ {2,3,4} 边的 from，且 output.signal 缺失 → E111
 ```
 
-### #14 导出仍含 `$ref`（**ACT-E112，仅 export 模式**）
+### #14 导出仍含 `$ref`（**LLMR-E112，仅 export 模式**）
 
 导出产物中任何未内联的 `$ref` → 错误。
 
-### #15 `level` 与命名空间不匹配（**ACT-E104**）
+### #15 `level` 与命名空间不匹配（**LLMR-E104**）
 
 ```
 level == 1        → ns ⊆ {artifact, run, args}
@@ -206,10 +206,10 @@ level ∈ {2,3,4}   → ns ⊆ {signal}
 
 ---
 
-### #16 引用项必须自带 `model`（**ACT-W207**）
+### #16 引用项必须自带 `model`（**LLMR-W207**）
 
 ```
-AMZ 项含 $ref，且解析后的 AMZ 无 model   → ACT-W207（警告）
+AMZ 项含 $ref，且解析后的 AMZ 无 model   → LLMR-W207（警告）
 ```
 
 **这不是代码 bug，是语义坑——由阶段 1 加载器暴露。**
@@ -222,10 +222,10 @@ AMZ 项含 $ref，且解析后的 AMZ 无 model   → ACT-W207（警告）
 
 ---
 
-### #17 环检测（**ACT-E113**）
+### #17 环检测（**LLMR-E113**）
 
 ```
-从入口可达的子图里存在环   → ACT-E113（错误，列出环的节点路径）
+从入口可达的子图里存在环   → LLMR-E113（错误，列出环的节点路径）
 ```
 
 **为什么要有这一条。** 执行器有 `max-steps` 兜底，但那是**运行期**才发现，
@@ -233,10 +233,10 @@ AMZ 项含 $ref，且解析后的 AMZ 无 model   → ACT-W207（警告）
 环是**纯静态**就能算出来的事——有环就说明这不再是「固定工作流」，是一个死循环。
 
 **查谁。** 有唯一入口时只查**从入口可达**的部分（不可达节点上的环永远跑不到，
-且已被 `ACT-W203` 标出）；**没有唯一入口时全图都查**。
+且已被 `LLMR-W203` 标出）；**没有唯一入口时全图都查**。
 
 > 后面这条不是多余的：环只要**包含入口**，就必然让入口不再唯一
-> （入口同时成了别人的目标），`ACT-E107` 会先响。
+> （入口同时成了别人的目标），`LLMR-E107` 会先响。
 > 那时若就此收手，用户看到的是「入口不唯一」这个**症状**，而不是「图里有环」这个**病因**。
 
 **怎么查。** 三色标记（白/灰/黑）+ **显式栈**的迭代 DFS。
@@ -253,7 +253,7 @@ AMZ 项含 $ref，且解析后的 AMZ 无 model   → ACT-W207（警告）
 
 ## 4. `when` 表达式解析器
 
-### 4.1 文法（**新增括号**，比 `ACT-设计规格.md` §9.4 更完整）
+### 4.1 文法（**新增括号**，比 `LLMR-设计规格.md` §9.4 更完整）
 
 ```
 expr    := orExpr
@@ -269,7 +269,7 @@ array   := '[' (literal (',' literal)*)? ']'
 > **`atom` 的运算符可省略**（本轮测试新增）：
 > `signal.need_docx` 等价于 `signal.need_docx == true`。
 > 这是最常见的判断形状；原来强制写 `== true` 是不必要的繁琐。
-> 省略时该字段**必须是 `bool` 类型**，否则求值失败（静态检查会报 `ACT-E106`）。
+> 省略时该字段**必须是 `bool` 类型**，否则求值失败（静态检查会报 `LLMR-E106`）。
 
 ### 4.1.1 解析上限（防栈溢出）
 
@@ -372,39 +372,39 @@ _review: { at, by, surfaceHash }   # 可选；有则 import 时校验
 
 | 码 | 检查 |
 |---|---|
-| `ACT-E001` | 结构违规（来自 JSON Schema，携带 ajv 的 instancePath） |
-| `ACT-E101` | 分支边组缺 `else` |
-| `ACT-E102` | 分支边组有多个 `else` |
-| `ACT-E103` | `when` 文法非法 |
-| `ACT-E104` | `level` 与命名空间不匹配 |
-| `ACT-E105` | 引用的 AMZ / 工具 / 页面组不存在 |
-| `ACT-E106` | `signal` 字段未声明或类型不符 |
-| `ACT-E107` | 入口不唯一（0 个或多个） |
-| `ACT-E108` | 非终态节点无出边 |
-| `ACT-E109` | 导入未复核 / 能力表面哈希不符 |
-| `ACT-E110` | AMZ id 冲突 |
-| `ACT-E111` | 有分支出边但缺 `output.signal` |
-| `ACT-E112` | 导出产物仍含未解析 `$ref` |
-| `ACT-E113` | 图里存在环（从入口可达的子图） |
+| `LLMR-E001` | 结构违规（来自 JSON Schema，携带 ajv 的 instancePath） |
+| `LLMR-E101` | 分支边组缺 `else` |
+| `LLMR-E102` | 分支边组有多个 `else` |
+| `LLMR-E103` | `when` 文法非法 |
+| `LLMR-E104` | `level` 与命名空间不匹配 |
+| `LLMR-E105` | 引用的 AMZ / 工具 / 页面组不存在 |
+| `LLMR-E106` | `signal` 字段未声明或类型不符 |
+| `LLMR-E107` | 入口不唯一（0 个或多个） |
+| `LLMR-E108` | 非终态节点无出边 |
+| `LLMR-E109` | 导入未复核 / 能力表面哈希不符 |
+| `LLMR-E110` | AMZ id 冲突 |
+| `LLMR-E111` | 有分支出边但缺 `output.signal` |
+| `LLMR-E112` | 导出产物仍含未解析 `$ref` |
+| `LLMR-E113` | 图里存在环（从入口可达的子图） |
 
 ### 警告（提示）
 
 | 码 | 检查 |
 |---|---|
-| `ACT-W201` | AMZ 含 `exec` 类工具（sandbox 不是 per-AMZ 的） |
-| `ACT-W202` | `level >= 2` 但只用确定性变量 → 可降级 1 |
-| `ACT-W203` | 不可达节点 |
-| `ACT-W204` | `terminal` 节点有出边 |
-| `ACT-W205` | 存在 `step` 型 AMZ（缓存影响提示） |
-| `ACT-W206` | 同时含 `exec` 与 `artifact` 类工具（CSP 保证削弱） |
-| `ACT-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） |
+| `LLMR-W201` | AMZ 含 `exec` 类工具（sandbox 不是 per-AMZ 的） |
+| `LLMR-W202` | `level >= 2` 但只用确定性变量 → 可降级 1 |
+| `LLMR-W203` | 不可达节点 |
+| `LLMR-W204` | `terminal` 节点有出边 |
+| `LLMR-W205` | 存在 `step` 型 AMZ（缓存影响提示） |
+| `LLMR-W206` | 同时含 `exec` 与 `artifact` 类工具（CSP 保证削弱） |
+| `LLMR-W207` | `$ref` 引入的 AMZ 未声明 `model`（会静默回退部署默认） |
 
 ### 诊断 / 降级（**工具自身状态**，不是 SWF 内容的问题）
 
 | 码 | 含义 |
 |---|---|
-| `ACT-E999` | 校验器自身抛异常（内部错误）——**这是工具的 bug，不是被校验文件的错** |
-| `ACT-W000` | 降级提示：ajv/schema 不可用而跳过结构校验，或结构校验未通过而跳过语义检查 |
+| `LLMR-E999` | 校验器自身抛异常（内部错误）——**这是工具的 bug，不是被校验文件的错** |
+| `LLMR-W000` | 降级提示：ajv/schema 不可用而跳过结构校验，或结构校验未通过而跳过语义检查 |
 
 ---
 
@@ -413,20 +413,20 @@ _review: { at, by, surfaceHash }   # 可选；有则 import 时校验
 | 夹具 | 期望 |
 |---|---|
 | `verify/write_doc.swf.json` | 结构 VALID；语义 **0 错误**；产出 3 行能力表面 |
-| `verify/negative-csp-escalation.swf.json` | 结构 INVALID（`ACT-E001`，failingKeyword `then`） |
+| `verify/negative-csp-escalation.swf.json` | 结构 INVALID（`LLMR-E001`，failingKeyword `then`） |
 
 **需要新增的夹具**（覆盖语义检查）：
 
 | 新夹具 | 应触发 |
 |---|---|
-| 缺 `else` 的分支 | `ACT-E101` |
-| `level:1` 但用 `signal.` | `ACT-E104` |
-| `level:2` 但只用 `artifact.` | `ACT-W202` |
-| 引用了不存在的 `tools` | `ACT-E105` |
-| `when` 用了未声明的 `signal` 字段 | `ACT-E106` |
-| 两个入口 | `ACT-E107` |
-| 有分支出边但无 `output.signal` | `ACT-E111` |
-| AMZ 同时含 `docx_write` + `pwsh` | `ACT-W201` + `ACT-W206` |
+| 缺 `else` 的分支 | `LLMR-E101` |
+| `level:1` 但用 `signal.` | `LLMR-E104` |
+| `level:2` 但只用 `artifact.` | `LLMR-W202` |
+| 引用了不存在的 `tools` | `LLMR-E105` |
+| `when` 用了未声明的 `signal` 字段 | `LLMR-E106` |
+| 两个入口 | `LLMR-E107` |
+| 有分支出边但无 `output.signal` | `LLMR-E111` |
+| AMZ 同时含 `docx_write` + `pwsh` | `LLMR-W201` + `LLMR-W206` |
 
 ---
 
@@ -446,4 +446,4 @@ _review: { at, by, surfaceHash }   # 可选；有则 import 时校验
 - **纳入**：改流程也要重新复核 → 更严。理由：硬编码的边本身就是"能力"的一部分（它决定这个 SWF 会做什么）。
 - **不纳入**：改流程不必复核 → 更松，但陌生人可以改流程而哈希不变。
 
-**我倾向纳入**——因为 ACT 的核心主张就是"流程也是被设计出来的能力"。
+**我倾向纳入**——因为 LLMR 的核心主张就是"流程也是被设计出来的能力"。

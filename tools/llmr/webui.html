@@ -3,32 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ACT</title>
+<title>LLMR</title>
 <style>
   :root{
-    --bg:#fcfcfd; --panel:#ffffff; --fg:#111318; --fg2:#464b56; --muted:#8b909c;
-    --line:#e7e9ee; --line2:#eff1f5; --soft:#f5f6f9; --soft2:#eceef3;
-    --accent:#4f6bed; --accent2:#7b5cf0; --accent-soft:rgba(79,107,237,.13); --accent-fg:#fff;
-    --danger:#d8453c; --warn:#b7791f; --ok:#1f8a52;
-    --sh-xs:0 1px 1.5px rgba(16,18,22,.05);
-    --sh-sm:0 1px 2px rgba(16,18,22,.05), 0 1px 1px rgba(16,18,22,.03);
-    --sh-md:0 1px 2px rgba(16,18,22,.04), 0 10px 26px -6px rgba(16,18,22,.10);
-    --sh-lg:0 2px 8px rgba(16,18,22,.05), 0 30px 70px -20px rgba(16,18,22,.18);
-    --glow:linear-gradient(180deg, rgba(79,107,237,.052) 0%, rgba(79,107,237,.018) 22%, rgba(79,107,237,0) 46%);
-    --r:12px; --r-lg:16px; --r-sm:9px;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#0e1014; --panel:#161920; --fg:#edf0f5; --fg2:#b0b6c2; --muted:#7b8290;
-      --line:#232832; --line2:#1d222a; --soft:#1b1f26; --soft2:#222831;
-      --accent:#8ba4ff; --accent2:#a78bfa; --accent-soft:rgba(139,164,255,.16); --accent-fg:#0c0f16;
-      --danger:#ff8b80; --warn:#e5b567; --ok:#5cc98c;
-      --sh-xs:0 1px 1.5px rgba(0,0,0,.3);
-      --sh-sm:0 1px 2px rgba(0,0,0,.35);
-      --sh-md:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -6px rgba(0,0,0,.5);
-      --sh-lg:0 2px 8px rgba(0,0,0,.45), 0 30px 70px -20px rgba(0,0,0,.7);
-      --glow:linear-gradient(180deg, rgba(139,164,255,.075) 0%, rgba(139,164,255,.026) 22%, rgba(139,164,255,0) 46%);
-    }
+    /* 底色：带冷调的近黑。整体只做暗色——一个 runtime 控制台就该长这样 */
+    --bg:#070a10; --panel:#0c1119; --panel2:#111823; --panel3:#161e2b;
+    --fg:#e8eef7; --fg2:#a3b2c7; --muted:#63748c; --muted2:#4a586b;
+    --line:#1a2432; --line2:#141c27; --soft:#0f1620; --soft2:#161f2b;
+    --accent:#4cc9f0; --accent2:#7b61ff; --accent3:#2ee6c5;
+    --accent-soft:rgba(76,201,240,.12); --accent-glow:rgba(76,201,240,.45);
+    --accent-fg:#04121a;
+    --danger:#ff5d6c; --warn:#f5b544; --ok:#38e08b;
+    --sh-xs:0 1px 1px rgba(0,0,0,.5);
+    --sh-sm:0 1px 2px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.02) inset;
+    --sh-md:0 2px 6px rgba(0,0,0,.5), 0 16px 40px -12px rgba(0,0,0,.75);
+    --sh-lg:0 2px 10px rgba(0,0,0,.55), 0 40px 90px -24px rgba(0,0,0,.9);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Cascadia Mono",monospace;
+    --r:10px; --r-lg:14px; --r-sm:7px;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -36,58 +27,90 @@
        font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
        display:flex;flex-direction:column;overflow:hidden;
        -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-  button,input,textarea,select{font:inherit;color:inherit}
-  ::selection{background:var(--accent-soft)}
-  ::-webkit-scrollbar{width:10px;height:10px}
-  ::-webkit-scrollbar-thumb{background:var(--soft2);border-radius:6px;border:3px solid transparent;
-       background-clip:content-box}
-  ::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:content-box}
 
-  header{flex:none;display:flex;align-items:center;gap:16px;padding:0 20px;height:56px;
-         background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:.01em}
-  .brand .mark{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;
-      background:linear-gradient(145deg,var(--accent),var(--accent2));
-      color:#fff;font-size:13px;font-weight:700;box-shadow:var(--sh-sm)}
-  .seg{display:flex;gap:2px;padding:3px;background:var(--soft);border-radius:10px}
-  .seg button{border:0;background:transparent;padding:5px 15px;border-radius:7px;cursor:pointer;
-      color:var(--muted);font-size:13px;font-weight:500;transition:all .16s ease}
-  .seg button.on{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:var(--sh-sm)}
+  /* 背景：细网格 + 两团冷光。压在最底层，不挡交互 */
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+       background-image:
+         linear-gradient(rgba(76,201,240,.05) 1px,transparent 1px),
+         linear-gradient(90deg,rgba(76,201,240,.05) 1px,transparent 1px);
+       background-size:46px 46px;
+       -webkit-mask-image:radial-gradient(130% 95% at 50% -5%,#000 18%,transparent 76%);
+       mask-image:radial-gradient(130% 95% at 50% -5%,#000 18%,transparent 76%)}
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+       background:
+         radial-gradient(920px 430px at 14% -10%,rgba(76,201,240,.15),transparent 62%),
+         radial-gradient(780px 400px at 94% 2%,rgba(123,97,255,.13),transparent 60%)}
+
+  button,input,textarea,select{font:inherit;color:inherit}
+  ::selection{background:rgba(76,201,240,.28)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#1e2836;border-radius:6px;border:3px solid transparent;
+       background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#2c3a4d;background-clip:content-box}
+
+  header{position:relative;z-index:3;flex:none;display:flex;align-items:center;gap:18px;
+         padding:0 20px;height:56px;background:rgba(10,14,21,.82);
+         backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+         border-bottom:1px solid var(--line)}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
+         background:linear-gradient(90deg,transparent,rgba(76,201,240,.5) 18%,rgba(123,97,255,.45) 55%,transparent);
+         opacity:.62}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:680;font-size:15px;letter-spacing:.005em}
+  .brand .mark{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;
+         background:linear-gradient(145deg,#123040,#1a1a3d);
+         border:1px solid rgba(76,201,240,.34);
+         box-shadow:0 0 0 1px rgba(76,201,240,.07),0 4px 16px -4px rgba(76,201,240,.45)}
+  .brand .name{display:flex;align-items:baseline;gap:7px}
+  .brand .r{background:linear-gradient(100deg,var(--accent),var(--accent2));
+         -webkit-background-clip:text;background-clip:text;color:transparent;
+         font-weight:800;letter-spacing:.01em}
+  .brand .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--muted);
+         text-transform:uppercase;font-weight:500;padding-top:1px}
+  .seg{display:flex;gap:2px;padding:3px;background:var(--soft);border:1px solid var(--line2);
+       border-radius:9px}
+  .seg button{border:0;background:transparent;padding:5px 15px;border-radius:6px;cursor:pointer;
+       color:var(--muted);font-size:12.5px;font-weight:500;transition:all .16s ease}
+  .seg button.on{background:var(--panel3);color:var(--fg);font-weight:600;
+       box-shadow:0 0 0 1px rgba(76,201,240,.18),0 1px 3px rgba(0,0,0,.5)}
   .grow{flex:1}
 
-  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 14px;
-       cursor:pointer;font-size:13px;font-weight:500;box-shadow:var(--sh-xs);
-       transition:background .16s ease,border-color .16s ease,color .16s ease}
-  .btn:hover{background:var(--soft)}
-  .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600;
-       box-shadow:0 1px 2px rgba(16,18,22,.12)}
-  .btn.primary:hover{filter:brightness(1.07)}
+  .btn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:7px 14px;
+       cursor:pointer;font-size:13px;font-weight:500;color:var(--fg2);
+       transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease}
+  .btn:hover{background:var(--panel3);color:var(--fg);border-color:#243146}
+  .btn.primary{background:linear-gradient(180deg,rgba(76,201,240,.95),rgba(58,168,214,.95));
+       color:var(--accent-fg);border-color:transparent;font-weight:650;
+       box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 6px 22px -8px var(--accent-glow)}
+  .btn.primary:hover{filter:brightness(1.09);box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 8px 28px -8px var(--accent-glow)}
   .btn.plain{border-color:transparent;background:transparent;box-shadow:none;color:var(--muted)}
-  .btn.plain:hover{background:var(--soft);color:var(--fg)}
-  .btn:disabled{opacity:.45;cursor:default}
+  .btn.plain:hover{background:var(--soft2);color:var(--fg)}
+  .btn:disabled{opacity:.4;cursor:default}
+  .btn.sm{padding:4px 10px;font-size:12px;border-radius:7px}
+  .btn.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--soft2);color:var(--fg)}
 
-  main{flex:1;display:flex;min-height:0}
-  aside{width:262px;flex:none;background:var(--panel);border-right:1px solid var(--line);
-        display:flex;flex-direction:column;min-height:0}
+  main{position:relative;z-index:1;flex:1;display:flex;min-height:0}
+  aside{width:268px;flex:none;background:rgba(9,13,19,.72);border-right:1px solid var(--line);
+        display:flex;flex-direction:column;min-height:0;
+        backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
   aside .scroll{flex:1;overflow:auto;padding:12px}
   aside .foot{flex:none;padding:12px;border-top:1px solid var(--line2)}
-  section{flex:1;min-width:0;overflow:auto;background-image:var(--glow);
-       background-repeat:no-repeat;background-size:100% 100%}
+  section{flex:1;min-width:0;overflow:auto}
 
-  /* 侧栏顶部的主操作（对标「新对话」） */
   .newbtn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
-       padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel);
-       cursor:pointer;font-weight:600;font-size:13.5px;box-shadow:var(--sh-sm);
-       transition:all .16s ease}
-  .newbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);box-shadow:var(--sh-md)}
+       padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);
+       cursor:pointer;font-weight:600;font-size:13.5px;color:var(--fg);transition:all .18s ease}
+  .newbtn:hover{border-color:rgba(76,201,240,.5);color:var(--accent);background:var(--panel3);
+       box-shadow:0 6px 22px -10px var(--accent-glow)}
   .newbtn .plus{font-size:15px;line-height:1}
 
-  .side-h{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
-          color:var(--muted);margin:20px 10px 8px}
-  .row{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:9px;font-size:13.5px;
-       cursor:pointer;margin-bottom:1px;transition:background .14s ease}
-  .row:hover{background:var(--soft)}
-  .row.on{background:var(--accent-soft);font-weight:600;color:var(--accent)}
+  .side-h{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.16em;
+          text-transform:uppercase;color:var(--muted2);margin:20px 10px 8px}
+  .row{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;font-size:13.5px;
+       cursor:pointer;margin-bottom:1px;transition:background .14s ease;border:1px solid transparent}
+  .row:hover{background:var(--soft2)}
+  .row.on{background:var(--accent-soft);border-color:rgba(76,201,240,.24);font-weight:600;
+       color:var(--accent)}
   .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .row .x{opacity:0;border:0;background:none;cursor:pointer;color:var(--muted);
           padding:0 3px;border-radius:5px;font-size:15px;line-height:1;transition:opacity .14s ease}
@@ -101,124 +124,180 @@
 
   /* ── 首页 ── */
   .hero{min-height:100%;display:flex;flex-direction:column;align-items:center;
-        padding:min(15vh,132px) 28px 64px;text-align:center}
-  .hero .greet{font-size:clamp(23px,2.9vw,33px);font-weight:650;letter-spacing:-.024em;
-        margin:0 0 10px;line-height:1.22}
-  .hero .sub{color:var(--muted);font-size:14px;margin:0 0 30px}
-  .ask{width:min(640px,100%);text-align:left}
-  .ask .box{display:flex;align-items:center;gap:10px;background:var(--panel);
-        border:1px solid var(--line);border-radius:26px;padding:7px 7px 7px 22px;
+        padding:min(15vh,130px) 28px 64px;text-align:center}
+  .hero .greet{font-size:clamp(24px,3vw,34px);font-weight:660;letter-spacing:-.028em;
+        margin:0 0 12px;line-height:1.2;
+        background:linear-gradient(180deg,#fff,#96a8bf);-webkit-background-clip:text;
+        background-clip:text;color:transparent}
+  .hero .sub{color:var(--muted);font-size:14px;margin:0 0 32px}
+  .askbox{width:min(660px,100%);text-align:left}
+  .askbox .box{display:flex;align-items:center;gap:10px;background:var(--panel2);
+        border:1px solid var(--line);border-radius:14px;padding:8px 8px 8px 20px;
         box-shadow:var(--sh-md);transition:border-color .18s ease,box-shadow .18s ease}
-  .ask .box:focus-within{border-color:var(--accent);
-        box-shadow:0 0 0 3px var(--accent-soft),var(--sh-md)}
-  .ask input{flex:1;border:0;background:transparent;outline:none;font-size:15px;padding:11px 0}
-  .ask input::placeholder{color:var(--muted)}
-  .ask .send{width:38px;height:38px;flex:none;border:0;border-radius:50%;cursor:pointer;
-        background:var(--accent);color:var(--accent-fg);font-size:15px;display:grid;place-items:center;
-        transition:filter .16s ease}
-  .ask .send:hover{filter:brightness(1.08)}
-  .ask .send:disabled{opacity:.35;cursor:default;filter:none}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;width:min(640px,100%)}
-  .chip{border:1px solid var(--line);background:var(--panel);color:var(--fg2);
-        border-radius:20px;padding:6px 15px;font-size:12.5px;cursor:pointer;
-        transition:all .16s ease;box-shadow:var(--sh-xs)}
-  .chip:hover{border-color:var(--accent);color:var(--accent);background:var(--soft)}
+  .askbox .box:focus-within{border-color:rgba(76,201,240,.55);
+        box-shadow:0 0 0 4px rgba(76,201,240,.09),0 10px 34px -14px var(--accent-glow)}
+  .askbox input{flex:1;border:0;background:transparent;outline:none;font-size:15px;padding:11px 0}
+  .askbox input::placeholder{color:var(--muted2)}
+  .askbox .send{width:40px;height:40px;flex:none;border:0;border-radius:10px;cursor:pointer;
+        background:linear-gradient(180deg,rgba(76,201,240,.95),rgba(58,168,214,.95));
+        color:var(--accent-fg);font-size:16px;display:grid;place-items:center;
+        transition:filter .16s ease,box-shadow .16s ease;
+        box-shadow:0 6px 20px -8px var(--accent-glow)}
+  .askbox .send:hover{filter:brightness(1.1)}
+  .askbox .send:disabled{opacity:.3;cursor:default;filter:none;box-shadow:none}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;width:min(660px,100%)}
+  .chip{border:1px solid var(--line);background:var(--panel2);color:var(--fg2);
+        border-radius:8px;padding:6px 14px;font-size:12.5px;cursor:pointer;
+        font-family:var(--mono);transition:all .16s ease}
+  .chip:hover{border-color:rgba(76,201,240,.5);color:var(--accent);background:var(--panel3)}
 
   /* ── 确认卡 ── */
-  .confirm{width:min(560px,100%);text-align:left;background:var(--panel);border:1px solid var(--line);
+  .confirm{width:min(580px,100%);text-align:left;background:var(--panel2);border:1px solid var(--line);
         border-radius:var(--r-lg);padding:26px 28px;box-shadow:var(--sh-lg)}
-  .confirm .lead{font-size:16.5px;font-weight:640;margin:0 0 6px;letter-spacing:-.012em}
+  .confirm .lead{font-size:16.5px;font-weight:650;margin:0 0 6px;letter-spacing:-.014em}
   .confirm .said{color:var(--muted);font-size:13px;margin:0 0 22px;word-break:break-word}
-  .pick{display:flex;align-items:center;gap:13px;background:var(--soft);border-radius:var(--r);
-        padding:14px 16px;margin-bottom:20px}
-  .pick .ic{width:36px;height:36px;flex:none;border-radius:11px;background:var(--panel);
-        display:grid;place-items:center;box-shadow:var(--sh-sm);font-size:15px;color:var(--accent)}
+  .pick{display:flex;align-items:center;gap:13px;background:var(--soft);border:1px solid var(--line2);
+        border-radius:var(--r);padding:14px 16px;margin-bottom:20px}
+  .pick .ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--panel3);
+        border:1px solid rgba(76,201,240,.24);display:grid;place-items:center;font-size:15px;
+        color:var(--accent)}
   .pick .t{flex:1;min-width:0}
   .pick .t b{display:block;font-weight:620;font-size:13.5px}
   .pick .t span{color:var(--muted);font-size:12.5px}
   .confirm .actions{display:flex;gap:10px;align-items:center;margin-top:22px}
 
-  label.f{display:block;margin:16px 0 6px;font-size:11.5px;color:var(--muted);
-        font-weight:650;letter-spacing:.05em;text-transform:uppercase}
-  input[type=text],input[type=password],textarea,select{width:100%;padding:10px 12px;
-        border:1px solid var(--line);border-radius:10px;background:var(--panel);outline:none;
-        transition:border-color .16s ease,box-shadow .16s ease;font-size:13.5px}
-  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-  textarea{min-height:64px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;resize:vertical}
+  label.f{display:block;margin:16px 0 6px;font-family:var(--mono);font-size:10.5px;color:var(--muted);
+        font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  input[type=text],input[type=password],input[type=number],textarea,select{width:100%;padding:10px 12px;
+        border:1px solid var(--line);border-radius:9px;background:var(--soft);outline:none;
+        transition:border-color .16s ease,box-shadow .16s ease;font-size:13.5px;color:var(--fg)}
+  input::placeholder,textarea::placeholder{color:var(--muted2)}
+  input:focus,textarea:focus,select:focus{border-color:rgba(76,201,240,.55);
+        box-shadow:0 0 0 3px rgba(76,201,240,.09)}
+  textarea{min-height:64px;font-family:var(--mono);font-size:12.5px;resize:vertical}
 
   /* ── 内容页 ── */
-  .page{max-width:960px;margin:0 auto;padding:34px 36px 72px}
-  .title{font-size:23px;font-weight:650;letter-spacing:-.02em;margin:0 0 5px}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 22px;word-break:break-all}
+  .page{max-width:1000px;margin:0 auto;padding:36px 38px 80px}
+  .title{font-size:23px;font-weight:660;letter-spacing:-.024em;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 20px;word-break:break-all;font-family:var(--mono)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
         padding:22px 24px;margin-bottom:16px;box-shadow:var(--sh-sm)}
   .card.flush{padding:0;overflow:hidden}
-  .h2{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
-      color:var(--muted);margin:28px 0 10px}
+  .h2{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.16em;
+      text-transform:uppercase;color:var(--muted2);margin:30px 0 10px;
+      display:flex;align-items:center;gap:9px}
+  .h2::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
   .card .h2:first-child{margin-top:0}
-  .hint{color:var(--muted);font-size:13px}
+  .hint{color:var(--muted);font-size:12.5px}
   .empty{color:var(--muted);text-align:center;padding:90px 20px;line-height:1.9}
-  .pill{display:inline-block;padding:2px 10px;border-radius:20px;background:var(--soft);
-        color:var(--fg2);font-size:11.5px;margin:0 6px 6px 0}
-  .pill.on{background:var(--accent-soft);color:var(--accent)}
+  .pill{display:inline-block;padding:2px 10px;border-radius:6px;background:var(--soft);
+        border:1px solid var(--line2);color:var(--fg2);font-size:11.5px;margin:0 6px 6px 0;
+        font-family:var(--mono)}
+  .pill.on{background:var(--accent-soft);color:var(--accent);border-color:rgba(76,201,240,.24)}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
   tr:last-child td{border-bottom:0}
-  th{color:var(--muted);font-weight:650;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
-  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
-  ul.tree{margin:0;padding:0;list-style:none;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  tr:hover td{background:rgba(76,201,240,.025)}
+  th{color:var(--muted2);font-weight:600;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+     font-family:var(--mono)}
+  .mono{font-family:var(--mono);font-size:12.5px}
+  ul.tree{margin:0;padding:0;list-style:none;font-family:var(--mono);font-size:12.5px}
   ul.tree li{padding:2px 0}
   .edge{color:var(--muted)}
   .e-err{color:var(--danger)} .e-warn{color:var(--warn)} .e-ok{color:var(--ok)}
-  .note{border-left:3px solid var(--accent);background:var(--soft);padding:11px 15px;
-        border-radius:0 10px 10px 0;font-size:13px}
-  .trace{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
-        box-shadow:var(--sh-sm)}
-  .step{display:flex;align-items:baseline;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line2)}
-  .step:last-child{border-bottom:0}
-  .step .id{font-family:ui-monospace,Consolas,monospace;font-weight:600;min-width:150px}
-  .step .st{font-size:12.5px;color:var(--muted)}
-  /* 过程：一行流动的胶囊 */
+  .note{border-left:2px solid var(--accent);background:var(--soft);padding:11px 15px;
+        border-radius:0 8px 8px 0;font-size:13px}
+
+  /* ── 执行轨迹：一行流动的胶囊（图渲染不了时的兜底）── */
   .flow{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;
         display:flex;flex-wrap:wrap;align-items:center;gap:7px 9px;box-shadow:var(--sh-sm)}
-  .flow .chip{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:600;
-        background:var(--soft);border-radius:7px;padding:4px 10px;white-space:nowrap}
-  .flow .chip.last{background:var(--accent-soft);color:var(--accent)}
-  .flow .arw{color:var(--muted);font-size:12px}
+  .flow .chip{font-family:var(--mono);font-size:12px;font-weight:600;
+        background:var(--soft2);border:1px solid var(--line2);border-radius:6px;padding:4px 10px;
+        white-space:nowrap;cursor:default}
+  .flow .chip:hover{border-color:var(--line)}
+  .flow .chip.last{background:var(--accent-soft);color:var(--accent);border-color:rgba(76,201,240,.3)}
+  .flow .arw{color:var(--muted2);font-size:12px}
   .flow .arw.alt{color:var(--warn);font-weight:600}
   .flow .arw.pause{color:var(--accent);font-weight:600}
   .flow .arw.end{color:var(--ok)}
-  .out{background:var(--soft);border-radius:10px;padding:16px 18px;white-space:pre-wrap;
-       word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
-  /* 作业成品：像一张纸，而不是一段日志 */
-  .paper{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
-         padding:26px 30px;white-space:pre-wrap;word-break:break-word;line-height:1.75;
-         font-size:14px;box-shadow:var(--sh-sm);max-width:74ch}
-  .ask{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+
+  /* ── 调用图（SVG）── */
+  .graph{position:relative;border:1px solid var(--line);border-radius:var(--r);overflow:auto;
+        background:
+          radial-gradient(720px 300px at 30% 0%,rgba(76,201,240,.055),transparent 68%),
+          var(--panel);
+        box-shadow:var(--sh-sm)}
+  .graph svg{display:block}
+  .g-edge{fill:none;stroke:#243044;stroke-width:1.3;transition:stroke .3s ease}
+  .g-edge.else{stroke-dasharray:4 4;stroke:#5c4a22}
+  .g-edge.done{stroke:var(--accent);stroke-width:1.7}
+  .g-edge.done.else{stroke:var(--warn);stroke-dasharray:4 4}
+  .g-edge.flow{stroke-dasharray:5 7;animation:gflow 1.05s linear infinite}
+  @keyframes gflow{to{stroke-dashoffset:-24}}
+  .g-node rect{fill:var(--panel2);stroke:#22303f;stroke-width:1;transition:all .3s ease}
+  .g-node:hover rect{fill:var(--panel3);stroke:#31435a}
+  .g-node .nid{fill:var(--fg2);font-family:var(--mono);font-size:11.5px;font-weight:600}
+  .g-node .kind{fill:var(--muted2);font-family:var(--mono);font-size:9px;font-weight:500}
+  .g-node .ntag{fill:var(--muted2);font-family:var(--mono);font-size:9px}
+  .g-node .dot{fill:#22303f;transition:fill .3s ease}
+  .g-node.entry rect{stroke:rgba(76,201,240,.45)}
+  .g-node.terminal rect{stroke-dasharray:3 3;stroke:#2c3a4d}
+  .g-node.done rect{fill:rgba(76,201,240,.09);stroke:var(--accent)}
+  .g-node.done .nid{fill:var(--accent)}
+  .g-node.done .dot{fill:var(--accent);filter:drop-shadow(0 0 4px var(--accent-glow))}
+  .g-node.paused .dot{filter:drop-shadow(0 0 4px rgba(245,181,68,.6))}
+  .g-node.done rect{filter:drop-shadow(0 0 8px rgba(76,201,240,.14))}
+  .g-node.paused rect{fill:rgba(245,181,68,.1);stroke:var(--warn)}
+  .g-node.paused .nid{fill:var(--warn)}
+  .g-node.paused .dot{fill:var(--warn)}
+  .g-labbg{fill:#0c1119;opacity:.94}
+  .g-lab{fill:var(--muted2);font-family:var(--mono);font-size:9.5px}
+  .g-lab.else{fill:#8a6a2c}
+  .g-lab.on{fill:var(--accent)}
+  .g-legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:10px;
+        font-family:var(--mono);font-size:11px;color:var(--muted2)}
+  .g-legend i{display:inline-block;width:18px;height:2px;border-radius:2px;margin-right:6px;
+        vertical-align:middle;background:#243044}
+  .g-legend i.else{background:repeating-linear-gradient(90deg,#5c4a22 0 4px,transparent 4px 8px)}
+  .g-legend i.done{background:var(--accent)}
+  .g-legend b{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;
+        vertical-align:middle;background:var(--panel2);border:1px solid #22303f}
+  .g-legend b.done{background:rgba(76,201,240,.16);border-color:var(--accent)}
+  .g-legend b.pause{background:rgba(245,181,68,.16);border-color:var(--warn)}
+  .g-legend b.term{border-style:dashed}
+
+  .out{background:var(--soft);border:1px solid var(--line2);border-radius:9px;padding:16px 18px;
+       white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:12.5px}
+  /* 成品：像一张纸，而不是一段日志 */
+  .paper{background:linear-gradient(180deg,#0f1620,#0c1119);border:1px solid var(--line);
+         border-radius:var(--r);padding:28px 32px;white-space:pre-wrap;word-break:break-word;
+         line-height:1.78;font-size:14px;box-shadow:var(--sh-md);max-width:76ch;position:relative}
+  .paper::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+         background:linear-gradient(90deg,transparent,rgba(76,201,240,.4),transparent)}
+  .ask{background:var(--panel2);border:1px solid rgba(76,201,240,.2);border-left:2px solid var(--accent);
        border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-sm);margin-bottom:16px}
   .ask .q{font-size:14.5px;line-height:1.65;margin-bottom:14px}
   .ask textarea{margin-bottom:10px}
   .ask-btns{display:flex;gap:9px}
-  .btn.ghost{background:transparent;color:var(--muted)}
-  .btn.ghost:hover{background:var(--soft)}
-  .btn.sm{padding:4px 10px;font-size:12px;border-radius:7px}
   /* 跑起来之后把表单收掉，让结果顶到眼前 */
   .foldline{display:none;align-items:center;gap:10px;margin:0 0 16px;font-size:12.5px;color:var(--muted)}
-  .foldline #foldSum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg2)}
+  .foldline #foldSum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+       color:var(--fg2);font-family:var(--mono)}
   .card.folded .fields{display:none}
   .card.folded .foldline{display:flex}
   .rowline{display:flex;align-items:center;gap:12px}
   .rowline .btn{flex:none}
-  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--fg);
-        color:var(--bg);padding:10px 20px;border-radius:22px;font-size:13px;box-shadow:var(--sh-lg);
-        opacity:0;pointer-events:none;transition:opacity .2s ease}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:9;
+       background:var(--panel3);color:var(--fg);border:1px solid var(--line);
+       padding:10px 20px;border-radius:10px;font-size:13px;box-shadow:var(--sh-lg);
+       opacity:0;pointer-events:none;transition:opacity .2s ease}
   .toast.on{opacity:1}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand"><span class="mark">A</span>ACT</div>
+  <div class="brand"><span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 6h5.5M4 12h9M4 18h5.5" stroke="#4cc9f0" stroke-width="2" stroke-linecap="round"/><circle cx="17.5" cy="6" r="2.2" stroke="#4cc9f0" stroke-width="1.6"/><circle cx="17.5" cy="18" r="2.2" stroke="#7b61ff" stroke-width="1.6"/><path d="M9.5 12h4.2M17.5 8.2v7.6" stroke="#2ee6c5" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 2"/></svg></span><span class="name">LLM <span class="r">R</span><span class="tag">Light Model Runtime</span></span></div>
   <div class="seg" id="modes">
     <button data-mode="user">用户</button>
     <button data-mode="dev">开发者</button>
@@ -241,7 +320,7 @@
 (function () {
   var $ = function (s) { return document.querySelector(s) }
   var S = { mode: 'user', settings: {}, agts: [], index: [], list: null,
-            agt: null, view: null, swfPath: null, panel: null, creating: false, draft: null,
+            agt: null, view: null, swfPath: null, panel: null, creating: false, draft: null, lastTrace: null,
             // 开发者模式下的「试跑」：主区换成运行表单，侧栏仍然是 SWF 列表（作者要能来回切）
             devRun: false }
 
@@ -329,7 +408,7 @@
       '<button class="newbtn" id="btnNew"><span class="plus">＋</span> 新建 AGT</button>'
       + '<div class="side-h">我的 AGT</div>' + list
     $('#sideFoot').innerHTML = (S.settings.model && S.settings.model.hasKey)
-      ? '<div class="sidefoot">ACT · 独立运行</div>'
+      ? '<div class="sidefoot">LLMR · 独立运行</div>'
       : '<div class="sidefoot">未配置模型 API<br><a id="footSet">去设置</a></div>'
     var fset = $('#footSet')
     if (fset) fset.onclick = function () { S.panel = 'settings'; paint() }
@@ -506,6 +585,9 @@
         if (btn) btn.disabled = false
         if (msg) msg.textContent = ''
         if (!r.trace) { $('#runBox').innerHTML = '<div class="e-err">' + esc(r.error || '失败') + '</div>'; return }
+        // 暂停恢复是**两次调用**。只显示后一次的话，图上前几步永远是黑的——
+    // 那几步是真跑过的，得拼起来。
+    S.lastTrace = (startAt && Array.isArray(S.lastTrace)) ? S.lastTrace.concat(r.trace) : r.trace
         if (r.paused) paintPause(r)
         else paintResult(r)
         var box = $('#runBox')
@@ -524,14 +606,238 @@
     h += '<textarea id="aText" rows="3" placeholder="直接回复，或粘贴作业内容…"></textarea>'
     h += '<div class="ask-btns"><button class="btn" id="btnGo">确认，继续</button>'
     h += '<button class="btn ghost" id="btnBack">改一下开头</button></div></div>'
-    h += traceHtml(r)
+    h += graphBlock(r)
     $('#runBox').innerHTML = h
+    animateGraph(S.lastTrace)
     $('#btnGo').onclick = function () {
       var t = $('#aText').value.trim()
       if (!t) { $('#aText').focus(); return }
       runAgt(r.pause.next, t)
     }
     $('#btnBack').onclick = function () { S.runArgs = null; $('input[data-arg=__goal]').focus(); runAgt() }
+  }
+
+  // ══════════ 调用图（SVG）══════════
+  //
+  // 分层从左到右：层号 = 从入口出发的最长路径。SWF 是 DAG（环已被 ACT-E113 拒掉），
+  // 所以最长路径一定收敛；万一拿到一张有环的声明，这里返回 null 让调用方退回文本树——
+  // **界面不该在一份坏声明上死循环**。
+  function renderGraph (swf, trace) {
+    if (!swf || typeof swf !== 'object') return null
+    var amzList = (Array.isArray(swf.amz) ? swf.amz : []).filter(function (a) {
+      return a && typeof a === 'object' && typeof a.id === 'string'
+    })
+    var ids = amzList.map(function (a) { return a.id })
+    var order = (Array.isArray(swf.order) ? swf.order : []).filter(function (e) { return e && e.from && e.to })
+    if (!ids.length || !order.length || ids.length > 120) return null
+
+    var byId = {}
+    amzList.forEach(function (a) { byId[a.id] = a })
+
+    // 边：一条 order 展开成「命中边 to」与「兜底边 else」两条可见的线
+    var links = []
+    order.forEach(function (e) {
+      if (byId[e.from] && byId[e.to]) links.push({ from: e.from, to: e.to, kind: 'when', label: e.when, level: e.level })
+      if (e.else !== undefined && byId[e.from] && byId[e.else]) {
+        var w = order.filter(function (x) { return x.from === e.from && x.else !== undefined })[0]
+        links.push({ from: e.from, to: e.else, kind: 'else', label: 'else', level: w ? w.level : undefined })
+      }
+    })
+    if (!links.length) return null
+
+    // ── 分层：Kahn 拓扑 + 最长路径松弛（迭代，不递归）──
+    var layer = {}, indeg = {}, out = {}
+    ids.forEach(function (id) { layer[id] = 0; indeg[id] = 0; out[id] = [] })
+    links.forEach(function (l) { out[l.from].push(l.to); indeg[l.to]++ })
+    var q = ids.filter(function (id) { return indeg[id] === 0 })
+    var seen = 0
+    while (q.length) {
+      var n = q.shift(); seen++
+      out[n].forEach(function (m) {
+        if (layer[m] < layer[n] + 1) layer[m] = layer[n] + 1
+        if (--indeg[m] === 0) q.push(m)
+      })
+    }
+    if (seen !== ids.length) return null // 有环 → 交给文本树兜底
+
+    // ── 尺寸与排版（**纵向**分层）──
+    // 横向排 11 层要 1400px，容器一裁就只剩前几层，等于没画。
+    // 纵排：页面本来就上下滚，流程图也本来就是从上往下读。同层节点左右并排（分支）。
+    var term = Array.isArray(swf.terminal) ? swf.terminal : []
+    var entries = ids.filter(function (id) { return !links.some(function (l) { return l.to === id }) })
+    var entry = entries.length === 1 ? entries[0] : null
+
+    var NH = 42, GY = 34, GX = 26, PAD = 26
+    var NW = {}
+    ids.forEach(function (id) {
+      var a = byId[id] || {}
+      var kind = String(a.kind || '')
+      NW[id] = Math.max(140, Math.min(212, 34 + id.length * 7.2 + (kind ? kind.length * 6.4 + 14 : 0)))
+    })
+    var layers = {}
+    ids.forEach(function (id) { (layers[layer[id]] = layers[layer[id]] || []).push(id) })
+    var rows = Object.keys(layers).map(Number).sort(function (a, b) { return a - b })
+    var rowH = {}, rowW = {}
+    rows.forEach(function (L) {
+      rowH[L] = NH
+      var w = 0
+      layers[L].forEach(function (id, i) { w += NW[id] + (i ? GX : 0) })
+      rowW[L] = w
+    })
+    var W = Math.max.apply(null, rows.map(function (L) { return rowW[L] })) + PAD * 2
+    var H = 0, rowY = {}
+    rows.forEach(function (L) { rowY[L] = H; H += NH + GY })
+    H -= GY
+    H += PAD // 最后一排下面也留白，否则贴着容器边被切
+
+    var pos = {}
+    rows.forEach(function (L) {
+      var x = (W - rowW[L]) / 2
+      layers[L].forEach(function (id) {
+        pos[id] = { x: x, y: rowY[L] }
+        x += NW[id] + GX
+      })
+    })
+
+    // ── 轨迹：哪些节点/边走过了 ──
+    var doneN = {}, doneE = {}, pausedN = {}
+    ;(Array.isArray(trace) ? trace : []).forEach(function (t) {
+      if (!t || !t.amz) return
+      doneN[t.amz] = 1
+      if (t.via === 'pause') pausedN[t.amz] = 1
+      if (t.to) doneE[t.amz + '\u0000' + t.to] = 1
+    })
+
+    var arrow = 'gArrow', arrowOn = 'gArrowOn'
+    var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" ' +
+      'xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,Consolas,monospace">'
+    svg += '<defs>' +
+      '<marker id="' + arrow + '" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">' +
+      '<path d="M0 1 L7 4 L0 7 z" fill="#243044"/></marker>' +
+      '<marker id="' + arrowOn + '" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">' +
+      '<path d="M0 1 L7 4 L0 7 z" fill="#4cc9f0"/></marker>' +
+      '</defs>'
+
+    // 先画边，让节点压在上面
+    var showLab = links.length <= 20
+    links.forEach(function (l) {
+      var a = pos[l.from], b = pos[l.to]
+      if (!a || !b) return
+      var x1 = a.x + NW[l.from] / 2, y1 = a.y + NH
+      var x2 = b.x + NW[l.to] / 2, y2 = b.y
+      // 回到同一层或向上（else 指回上层）时，曲线要绕一下，别穿模
+      var dy = Math.max(20, Math.abs(y2 - y1) * 0.42)
+      var d = 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + (y1 + dy) + ' ' + x2 + ' ' + (y2 - dy) + ' ' + x2 + ' ' + y2
+      var on = doneE[l.from + '\u0000' + l.to]
+      var cls = 'g-edge' + (l.kind === 'else' ? ' else' : '') + (on ? ' done flow' : '')
+      svg += '<path class="' + cls + '" d="' + d + '" marker-end="url(#' + (on ? arrowOn : arrow) + ')" data-from="' +
+        esc(l.from) + '" data-to="' + esc(l.to) + '"/>'
+      if (showLab) {
+        var mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - 11
+        var lab = l.kind === 'else' ? 'else' : String(l.label === undefined ? '?' : l.label).replace(/\s+/g, ' ')
+        if (lab.length > 26) lab = lab.slice(0, 25) + '…'
+        // 标签压在曲线上就糊了——给一块底色，宽度按字数估
+        var lw = lab.length * 5.7 + 12
+        svg += '<rect class="g-labbg" x="' + (mx - lw / 2) + '" y="' + (my - 10) + '" width="' + lw +
+          '" height="14" rx="4"/>'
+        svg += '<text class="g-lab' + (l.kind === 'else' ? ' else' : '') + (on ? ' on' : '') +
+          '" x="' + mx + '" y="' + my + '" text-anchor="middle">' + esc(lab) + '</text>'
+      }
+    })
+
+    // 再画节点
+    ids.forEach(function (id) {
+      var p = pos[id]
+      if (!p) return
+      var a = byId[id] || {}
+      var w = NW[id]
+      var cls = 'g-node' + (id === entry ? ' entry' : '') + (term.indexOf(id) >= 0 ? ' terminal' : '') +
+        (doneN[id] ? ' done' : '') + (pausedN[id] ? ' paused' : '')
+      var kind = String(a.kind || '')
+      var tools = Array.isArray(a.tools) ? a.tools.length : 0
+      var tag = (doneN[id] ? '●' : '○') + (tools ? ' ⚙' + tools : '')
+      svg += '<g class="' + cls + '" data-id="' + esc(id) + '">'
+      svg += '<rect x="' + p.x + '" y="' + p.y + '" width="' + w + '" height="' + NH + '" rx="9"/>'
+      svg += '<circle class="dot" cx="' + (p.x + 15) + '" cy="' + (p.y + NH / 2) + '" r="3"/>'
+      svg += '<text class="nid" x="' + (p.x + 26) + '" y="' + (p.y + (kind ? 19 : 25.5)) + '">' + esc(id) + '</text>'
+      if (kind) svg += '<text class="kind" x="' + (p.x + 26) + '" y="' + (p.y + 31.5) + '">' + esc(kind) + '</text>'
+      svg += '<text class="ntag" x="' + (p.x + w - 11) + '" y="' + (p.y + NH / 2 + 3.5) + '" text-anchor="end">' +
+        esc(tag) + '</text>'
+      svg += '</g>'
+    })
+
+    svg += '</svg>'
+    return svg
+  }
+
+  function graphLegend () {
+    return '<div class="g-legend">' +
+      '<span><b></b>未执行</span>' +
+      '<span><b class="done"></b>已执行</span>' +
+      '<span><b class="pause"></b>在此等你确认</span>' +
+      '<span><b class="term"></b>终态</span>' +
+      '<span><i></i>when</span>' +
+      '<span><i class="else"></i>else</span>' +
+      '<span><i class="done"></i>本次走过的边</span>' +
+      '</div>'
+  }
+
+  // 回放：轨迹是**已经跑完的真实数据**，这里只是按顺序点灯，不是假装在执行
+  var _gTimers = []
+  function clearGraphTimers () {
+    for (var i = 0; i < _gTimers.length; i++) clearTimeout(_gTimers[i])
+    _gTimers = []
+  }
+  function nodeOf (svg, id) {
+    var ns = svg.querySelectorAll('.g-node')
+    for (var i = 0; i < ns.length; i++) if (ns[i].getAttribute('data-id') === id) return ns[i]
+    return null
+  }
+  function edgeOf (svg, from, to) {
+    var es = svg.querySelectorAll('.g-edge')
+    for (var i = 0; i < es.length; i++) {
+      if (es[i].getAttribute('data-from') === from && es[i].getAttribute('data-to') === to) return es[i]
+    }
+    return null
+  }
+  var _gTrace = null
+  function applyStep (svg, t) {
+    var n = nodeOf(svg, t.amz)
+    if (n) { n.classList.add('done'); if (t.via === 'pause') n.classList.add('paused') }
+    if (t.to) { var e = edgeOf(svg, t.amz, t.to); if (e) e.classList.add('done', 'flow') }
+  }
+  function animateGraph (trace) {
+    clearGraphTimers()
+    var svg = document.querySelector('.graph svg')
+    var tr = Array.isArray(trace) ? trace : []
+    _gTrace = tr
+    if (!svg || !tr.length) return
+    var ns = svg.querySelectorAll('.g-node')
+    for (var i = 0; i < ns.length; i++) ns[i].classList.remove('done', 'paused')
+    var es = svg.querySelectorAll('.g-edge')
+    for (var j = 0; j < es.length; j++) es[j].classList.remove('done', 'flow')
+    var STEP = 230
+    tr.forEach(function (t, k) {
+      _gTimers.push(setTimeout(function () { applyStep(svg, t) }, k * STEP))
+    })
+  }
+  // 静态预览要一次到位（出图 / 截图）：**照真实轨迹点亮**，别停在动画中途，
+  // 也别图省事把所有节点都点上——那就成了撒谎。
+  function finishGraphAnimation () {
+    clearGraphTimers()
+    var svg = document.querySelector('.graph svg')
+    if (!svg || !_gTrace) return
+    _gTrace.forEach(function (t) { applyStep(svg, t) })
+  }
+
+  // 有图就画图，画不了退回胶囊流（同一份数据，两种呈现）
+  function graphBlock (r) {
+    var swf = (S.view && S.view.swf) || null
+    var svg = null
+    var tr = (S.lastTrace && S.lastTrace.length) ? S.lastTrace : (r && r.trace)
+    try { svg = renderGraph(swf, tr) } catch (e) { svg = null }
+    if (!svg) return traceHtml(r)
+    return '<div class="h2">执行轨迹</div><div class="graph">' + svg + '</div>' + graphLegend()
   }
 
   // 过程画成一行流动的胶囊，而不是每步一行的清单：
@@ -554,8 +860,9 @@
     h += r.ok ? '<div class="e-ok" style="margin-bottom:12px">完成 · ' + r.steps + ' 步</div>'
               : '<div class="e-err" style="margin-bottom:12px">' + esc(r.status) + esc(r.reason ? ' — ' + r.reason : '') + '</div>'
     if (r.finalOutput) h += '<div class="paper">' + esc(r.finalOutput) + '</div>'
-    h += traceHtml(r)
+    h += graphBlock(r)
     $('#runBox').innerHTML = h
+    animateGraph(S.lastTrace)
   }
 
   function selectAgt (id) {
@@ -628,7 +935,12 @@
       }).join('')
     }
 
-    h += '<div class="h2">调用顺序</div><div class="card">' + tree(swf) + '</div>'
+    var gsvg = null
+    try { gsvg = renderGraph(swf, S.lastTrace) } catch (e2) { gsvg = null }
+    h += '<div class="h2">调用图</div>'
+    h += gsvg
+      ? '<div class="graph">' + gsvg + '</div>' + graphLegend()
+      : '<div class="card">' + treeFallback(swf) + '</div>'
 
     h += '<div class="h2">AMZ（有效值：defaults 已应用，$ref 已解析）</div><div class="card flush">'
     h += '<table><thead><tr><th>id</th><th>kind</th><th>tools</th><th>model</th><th>body</th><th>signal</th></tr></thead><tbody>'
@@ -658,7 +970,7 @@
     if (tryRun) tryRun.onclick = function () { S.devRun = true; paint() }
   }
 
-  function tree (swf) {
+  function treeFallback (swf) {
     var order = Array.isArray(swf.order) ? swf.order : []
     var adj = {}, targets = {}, froms = []
     order.forEach(function (e) {
@@ -700,7 +1012,7 @@
     $('#btnBack').onclick = function () { S.panel = null; paint() }
     var s = S.settings, m = s.model || {}
     $('#view').innerHTML = '<div class="page">'
-      + '<p class="title">设置</p><p class="sub">ACT 独立运行；这些设置存在 ACT 根目录的 settings.json。</p>'
+      + '<p class="title">设置</p><p class="sub">LLMR 独立运行；这些设置存在 LLMR 根目录的 settings.json。</p>'
 
       + '<div class="card"><div class="h2" style="margin-top:0">模型 API</div>'
       + '<div class="hint" style="margin-bottom:16px">这里配的是<b>接口与凭据</b>。'

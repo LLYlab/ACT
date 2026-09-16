@@ -1,9 +1,9 @@
 'use strict'
-// ACT 执行后端
+// LLMR 执行后端
 //
 // AMZ 的「执行」是可插拔的：同一条 SWF，可以交给
 //   · echo  —— 确定性后端，不调模型（测试用，也让整条图可端到端跑）
-//   · http  —— ACT 自己调模型（OpenAI 兼容 /chat/completions）
+//   · http  —— LLMR 自己调模型（OpenAI 兼容 /chat/completions）
 //   · dsh   —— 交给 DSH 的对话执行（spawn / fork 子会话）
 //
 // 后端接口：
@@ -102,7 +102,7 @@ function echoBackend (opts = {}) {
   }
 }
 
-// ── http：ACT 自己调模型（OpenAI 兼容）──────────────────────────────────
+// ── http：LLMR 自己调模型（OpenAI 兼容）──────────────────────────────────
 function httpBackend (opts = {}) {
   const baseUrl = String(opts.baseUrl || 'https://api.deepseek.com').replace(/\/+$/, '')
   const apiKey = opts.apiKey
@@ -171,7 +171,7 @@ function httpBackend (opts = {}) {
  * 工具表固定 → 该子会话的 preset，或对该 agent scope 施加 `tools.restrict`
  * 模型固定   → preset 的模型路由
  *
- * 这里只留接口；真正实现要跑在 DSH 进程里（见 ACT-设计规格.md §5.1）。
+ * 这里只留接口；真正实现要跑在 DSH 进程里（见 LLMR-设计规格.md §5.1）。
  */
 function dshBackend (handlers = {}) {
   const spawn = handlers.spawn

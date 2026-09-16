@@ -7,8 +7,8 @@
 // 声明里的 when / signal 字段 / ask 约定，只有拿真流程跑才暴露得出来。
 //
 // 用法：
-//   node tools/act/homework.smoke.cjs                 # 用内置的老师作业消息
-//   node tools/act/homework.smoke.cjs "老师刚发的…"    # 用你自己的消息
+//   node tools/llmr/homework.smoke.cjs                 # 用内置的老师作业消息
+//   node tools/llmr/homework.smoke.cjs "老师刚发的…"    # 用你自己的消息
 
 const path = require('path')
 const loader = require('./loader.cjs')
@@ -16,7 +16,7 @@ const { executeSwf, buildGraph } = require('./executor.cjs')
 const { echoBackend } = require('./backends.cjs')
 
 const SWF = path.resolve(__dirname, '..', '..', 'swfs', 'homework.swf.json')
-const PDF = 'C:\\Users\\L2959\\Desktop\\项目\\ACT\\_shot\\hw4.pdf'
+const PDF = 'C:\\Users\\L2959\\Desktop\\项目\\LLMR\\_shot\\hw4.pdf'
 
 const TEACHER = process.argv[2] || [
   'MATH2201.01 Homework 2 —— 老师在群里发的：',
@@ -52,14 +52,14 @@ const STAGES = [
 ]
 
 const main = async () => {
-  console.log('ACT · 作业 SWF 冒烟  ' + SWF)
+  console.log('LLMR · 作业 SWF 冒烟  ' + SWF)
   console.log('─'.repeat(64))
   console.log('输入（模拟用户把老师的话贴进来）：')
   console.log(TEACHER.split('\n').map((l) => '  │ ' + l).join('\n'))
   console.log('─'.repeat(64))
 
   const p = loader.prepare(SWF)
-  ok('声明能加载（无 ACT-E 级问题）', !p.problems, JSON.stringify(p.problems))
+  ok('声明能加载（无 LLMR-E 级问题）', !p.problems, JSON.stringify(p.problems))
   if (p.problems) process.exit(1)
 
   // ── 结构：入口唯一 ──

@@ -1,6 +1,6 @@
 'use strict'
-// ACT when-表达式：词法 / 语法 / 分析 / 求值
-// 文法见 ACT-校验器规格.md §4.1，求值语义见 §4.2
+// LLMR when-表达式：词法 / 语法 / 分析 / 求值
+// 文法见 LLMR-校验器规格.md §4.1，求值语义见 §4.2
 
 class ParseError extends Error {
   constructor (message, pos) { super(message); this.name = 'ParseError'; this.pos = pos }

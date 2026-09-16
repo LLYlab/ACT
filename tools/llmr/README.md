@@ -1,10 +1,10 @@
-# ACT 内核（`tools/act/`）
+# LLMR 内核（`tools/llmr/`）
 
-ACT 是一个 **Agent 程序**：用 DSH 的对话作为 AMZ、调 DSH 的工具、用 DSH 的插件。
+LLMR 是一个 **Agent 程序**：用 DSH 的对话作为 AMZ、调 DSH 的工具、用 DSH 的插件。
 这里放它的**宿主无关内核**——只 `require` `node:*` 加内部模块，**没有一处 DSH API 依赖**。
 
-> **ACT 的前端和后端都能独立运行。**
-> 后端 = 这里的程序；前端 = `server.cjs` + `webui.html`（ACT 自己的 WebUI）。
+> **LLMR 的前端和后端都能独立运行。**
+> 后端 = 这里的程序；前端 = `server.cjs` + `webui.html`（LLMR 自己的 WebUI）。
 > DSH 插件只是**接入方式之一**，不是必需。
 
 | 文件 | 职责 |
@@ -16,8 +16,8 @@ ACT 是一个 **Agent 程序**：用 DSH 的对话作为 AMZ、调 DSH 的工具
 | `backends.cjs` | 执行后端：`echo` / `http` / `dsh` |
 | `view.cjs` | **视图层**：`listOf` / `viewOf` —— 所有前端共用的唯一入口 |
 | `store.cjs` | 持久化：**AGT 实例**（`agts.json`）与设置（`settings.json`） |
-| `server.cjs` | **ACT 自己的 WebUI 后端**（零依赖 HTTP，不依赖 DSH） |
-| `webui.html` | **ACT 自己的 WebUI 前端**（原生 JS，无框架；两种模式） |
+| `server.cjs` | **LLMR 自己的 WebUI 后端**（零依赖 HTTP，不依赖 DSH） |
+| `webui.html` | **LLMR 自己的 WebUI 前端**（原生 JS，无框架；两种模式） |
 | `run.cjs` | 执行器 CLI |
 | `selftest.cjs` | 加载器 39 项 |
 | `exprtest.cjs` | 求值器与分析 51 项 |
@@ -52,7 +52,7 @@ node run.cjs <swf> [--lib=dir] [--backend=echo|http|dsh]
 
 ```
 $ node run.cjs ../../verify/write_doc.swf.json --args-file=args.json
-ACT 运行
+LLMR 运行
 后端: echo
 入口: plan_outline
 
@@ -65,7 +65,7 @@ ACT 运行
 
 > **`--args-file` 而不是 `--args`**：PowerShell 会吃掉 JSON 里的内层引号。复杂参数走文件。
 
-### 执行语义（依据 `ACT-设计规格.md`）
+### 执行语义（依据 `LLMR-设计规格.md`）
 
 | 情形 | 行为 |
 |---|---|
@@ -99,7 +99,7 @@ const r2 = await executeSwf(swf, {
 
 > 不加 `pause` 字段是因为 schema 冻结在 v1.0，而 `output.signal` 本来就是
 > 「AMZ 自报的结构化信息」。代价是这条约定必须写在文档里，不能靠字段名猜。
-> 详见 `ACT-设计规格.md` §16.3。
+> 详见 `LLMR-设计规格.md` §16.3。
 
 
 ### 判断用的环境（喂给 `expression.evaluate`）
@@ -115,12 +115,12 @@ const r2 = await executeSwf(swf, {
 
 ## 执行后端
 
-「AMZ 怎么执行」是可插拔的——**ACT 可以自己执行，也可以交给 DSH**。
+「AMZ 怎么执行」是可插拔的——**LLMR 可以自己执行，也可以交给 DSH**。
 
 | 后端 | 做什么 | 状态 |
 |---|---|---|
 | `echo` | 确定性产出，不调模型 | ✅ 已测——让整条图可端到端跑 |
-| `http` | **ACT 自己调模型**（OpenAI 兼容 `/chat/completions`） | ✅ 已测（注入假 fetch；真实网络未实测） |
+| `http` | **LLMR 自己调模型**（OpenAI 兼容 `/chat/completions`） | ✅ 已测（注入假 fetch；真实网络未实测） |
 | `dsh` | 交给 **DSH 对话**执行（spawn / fork） | 🔌 适配点，需在 DSH 进程内实现 |
 
 `http` 后端做两件可单测的事：**请求构建**（`buildRequest`）与**信号抽取**（`extractSignal`）。
@@ -145,16 +145,16 @@ swf, backend, args, ok, status, reason,
 steps: [{ seq, amz, status, input, output, signal, env, to, via, expr, meta }]
 ```
 
-它是「模型训练平台」那件事里 ACT **唯一该做**的部分——
+它是「模型训练平台」那件事里 LLMR **唯一该做**的部分——
 执行轨迹天然是 (输入, 输出, 用户裁决) 三元组，而且是**同分布**的
 （同一个 AMZ 的 prompt 固定，所以它的每次调用都是同分布样本）。
 
 ---
 
-## ACT WebUI（独立运行）
+## LLMR WebUI（独立运行）
 
 ```bash
-node server.cjs [--port=8735] [--dir=…/verify] [--root=…/ACT] [--allow-http]
+node server.cjs [--port=8735] [--dir=…/verify] [--root=…/LLMR] [--allow-http]
 ```
 
 打开 `http://127.0.0.1:8735/` —— **这条路径完全不经过 DSH**。
@@ -175,7 +175,7 @@ node server.cjs [--port=8735] [--dir=…/verify] [--root=…/ACT] [--allow-http]
 | 模式 | 内容 |
 |---|---|
 | **用户（默认）** | 侧栏 = **AGT 列表**；主区 = 选中 AGT 的用途与「开始」；另有**设置**与**＋ 新建 AGT** |
-| 开发者 | SWF 列表 · 校验结果 · 调用顺序图 · AMZ 有效值 · 能力表面 · 审查凭据 · **试跑** |
+| 开发者 | SWF 列表 · 校验结果 · **调用图** · AMZ 有效值 · 能力表面 · 审查凭据 · **试跑** |
 
 > **SWF / 图 / 能力表面属于开发者模式，不是主界面。**
 > 作者门槛高、用户门槛低——用户只面对自己的 AGT。
@@ -183,6 +183,34 @@ node server.cjs [--port=8735] [--dir=…/verify] [--root=…/ACT] [--allow-http]
 **开发者模式可以直接试跑选中的 SWF**（不必先建一个 AGT）。
 主区换成运行表单，**侧栏仍是 SWF 列表**——作者改完声明要能立刻跑一次、来回切。
 试跑复用用户模式那一套运行表单与渲染，**不另写一份实现**。
+
+### 调用图
+
+开发者视图的「调用图」是**从声明真的画出来的** SVG，不是示意图：
+
+- 纵排分层，层号 = 从入口出发的最长路径（Kahn 拓扑 + 最长路径松弛，**迭代不递归**）
+- 同层多个节点左右并排 = 分支；`when` 边实线、`else` 边虚线、终态虚框
+- 拿到**有环**的声明时返回 `null`，退回文本树——**界面不该在一份坏声明上死循环**
+- 节点超过 120 个也退回文本树（超过这个量级，图已经不可读了）
+
+跑完之后按轨迹**依次点亮**走过的节点与边。那是**轨迹回放**，数据来自真实执行，
+不是动画特效——所以它只会亮真的走过的那条路。
+
+> 暂停与恢复是两次调用。`runAgt` 会把两段轨迹**拼起来**再交给图，
+> 否则图上确认之前的那几步永远是黑的，而它们是真跑过的。
+
+### 出图核对（`uidemo.cjs`）
+
+界面好不好看不该靠嘴说。`uidemo.cjs` 把 `webui.html` 里**真正的 CSS 与渲染函数**拿去，
+只在 IIFE 末尾把 `boot()` 换成一段样例调用，生成静态页：
+
+```bash
+node uidemo.cjs      # → _shot/ui-{home,dev,pause,result}.html
+msedge --headless=new --window-size=1480,1750 \
+       --screenshot=_shot/ui-result.png file:///…/_shot/ui-result.html
+```
+
+样例数据里**开发者视图那份是真跑加载器 + 校验器算出来的**，不手写——手写的迟早和实现飘开。
 
 **AGT 实例**（`agts.json`）：`{ id, name, swf, purpose, createdAt }`。
 一个 AGT = 一个有名字的角色 + 它背后的 SWF；新建 AGT 就是给一张 SWF 起名并说清用途。
@@ -196,7 +224,7 @@ node server.cjs [--port=8735] [--dir=…/verify] [--root=…/ACT] [--allow-http]
 WebUI 在 echo 后端下会把一个「样例输出」框摆出来（换成真后端就消失）。
 
 > 前端与后端共用 `view.cjs` 一份视图实现——**WebUI、DSH 插件、CI 拿到的是同一份数据**，
-> 前端不需要复制任何 ACT 语义。
+> 前端不需要复制任何 LLMR 语义。
 
 ### 看版式：`uidemo.cjs`
 

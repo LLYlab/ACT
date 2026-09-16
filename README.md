@@ -1,10 +1,10 @@
 <div align="center">
 
-# ACT
+# LLM R
 
-**Agent Character Tool**
+**LLYlab Light Model Runtime** · 模型运行时
 
-### 别人在给 Agent 加自主性。ACT 在减。
+### 别人在给 Agent 加自主性。LLMR 在减。
 
 **用「人工设计的固定工作流 + 硬编码调用的隔离容器」，取代「通用 Agent 的自主工具使用」。**
 
@@ -13,7 +13,7 @@
 [![schema](https://img.shields.io/badge/schema-v1.0%20frozen-orange)](#它长什么样)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-<img src="docs/screenshots/agt-home.png" width="880" alt="ACT 界面">
+<img src="docs/screenshots/hero.png" width="900" alt="LLM R 界面">
 
 <sub>一个 AGT = 一个有名字的角色 + 它背后的固定工作流。用户只填「你要干什么」，剩下的交给流程。</sub>
 
@@ -29,9 +29,9 @@
 
 人类团队里没人这么干活。一份作业怎么做、一份合同怎么审、一次发布怎么走——这些是**流程**，是白纸黑字定下来的，不是每次临场发挥。只有流程定不下来的时候，我们才用"你看着办"。
 
-ACT 把这个常识搬回 Agent：**流程由人写死，模型只负责执行它被分配的那一小块。**
+LLMR 把这个常识搬回 Agent：**流程由人写死，模型只负责执行它被分配的那一小块。**
 
-| | 通用 Agent | ACT |
+| | 通用 Agent | LLMR |
 |---|---|---|
 | 流程 | 模型临场推理 | **人写死的一张图** |
 | 工具 | 全部塞进上下文 | **每个容器只见自己那几个** |
@@ -46,7 +46,7 @@ ACT 把这个常识搬回 Agent：**流程由人写死，模型只负责执行�
 
 ## 它长什么样
 
-ACT 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死的工作流声明。它是纯数据。
+LLMR 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死的工作流声明。它是纯数据。
 
 ```jsonc
 // swfs/homework.swf.json（节选）
@@ -70,14 +70,36 @@ ACT 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死
 
 每个 **AMZ** 是一个**独立容器**：它有自己的系统提示词、自己那几个工具、自己的模型。容器之间默认互不可见。边上的 `when` 是由**确定性求值器**算的——不是模型说了算。
 
-> **AMZ = 一个 DSH 对话。** ACT 不造运行时、不造权限引擎、不造记忆库——DSH 已经把这些做好了，ACT 只负责**按声明把它们编排起来**。
+> **AMZ = 一个 DSH 对话。** LLM R 不造运行时、不造权限引擎、不造记忆库——DSH 已经把这些做好了，LLMR 只负责**按声明把它们编排起来**。
 
 <div align="center">
 <table><tr>
-<td><img src="docs/screenshots/confirm-card.png" width="420" alt="确认卡"><br><sub>第 3 步：把「我理解成了什么」摆出来，等人点头</sub></td>
-<td><img src="docs/screenshots/result.png" width="420" alt="成品页"><br><sub>第 7 步：成品直接显示在页面上，11 步过程一行看完</sub></td>
+<td><img src="docs/screenshots/pause.png" width="430" alt="确认卡"><br><sub>第 3 步：把「我理解成了什么」摆出来，等人点头——图上停在琥珀色那一格</sub></td>
+<td><img src="docs/screenshots/result.png" width="430" alt="成品页"><br><sub>第 7 步：成品直接显示在页面上，整条流走过的路亮着</sub></td>
 </tr></table>
 </div>
+
+---
+
+## 界面：把「流程」画出来
+
+LLM R 的界面只有两种人用，所以只有两种样子。
+
+**普通用户**面对的是自己的 AGT：填「你要干什么」→ 开始 → 该确认的地方停下来问你 → 成品直接显示在页面上。
+
+**作者**面对的是声明本身：校验结果、**调用图**、AMZ 有效值表、能力表面、审查凭据，改完可以直接**试跑**，不必先建一个 AGT。
+
+<img src="docs/screenshots/call-graph.png" width="900" alt="开发者视图：调用图">
+
+调用图是**从声明真的画出来的**，不是示意图：
+
+- 层号 = 从入口出发的最长路径；分支左右并排，环会被校验器提前拒掉
+- 灰线是 `when` 边，**虚线**是 `else` 兜底边，虚框是终态
+- 跑完之后，**走过的节点和边会依次点亮**（那是轨迹回放，数据来自真实执行，不是动画特效）
+- 「在此等你确认」的节点是琥珀色——你一眼能看出流程卡在哪
+
+> 暂停与恢复是**两次调用**，界面会把两段轨迹拼起来显示。
+> 只显示后一段的话，图上前几步永远是黑的——那几步是真跑过的。
 
 ---
 
@@ -86,10 +108,10 @@ ACT 里只有一个概念：**SWF（Stable WorkFlow）**——一张人工写死
 **零运行时依赖**（只需要 Node，ajv 装上就多一层结构校验，不装也能跑）。
 
 ```bash
-git clone https://github.com/LLYlab/ACT.git && cd ACT
-node tools/act/homework.smoke.cjs     # 19 项：把一份真作业声明从头跑到尾，不花一分钱
-node tools/act/selftest.cjs           # 39 项：加载器
-node tools/act/server.cjs             # → http://127.0.0.1:8735/
+git clone https://github.com/LLYlab/LLM-R.git && cd LLM-R
+node tools/llmr/homework.smoke.cjs     # 19 项：把一份真作业声明从头跑到尾，不花一分钱
+node tools/llmr/selftest.cjs           # 39 项：加载器
+node tools/llmr/server.cjs             # → http://127.0.0.1:8735/
 ```
 
 WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产生任何模型花费**：
@@ -174,7 +196,7 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 ## 说清楚门槛（这条必须明说）
 
-**ACT 不是"装上就什么都能干"的通用 AI。** 它面向**中型/大型、任务性质明确、流程可复用**的工作。
+**LLMR 不是"装上就什么都能干"的通用 AI。** 它面向**中型/大型、任务性质明确、流程可复用**的工作。
 
 **作者门槛很高。** 不会写 SWF 的用户只剩三条路：
 
@@ -182,9 +204,9 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 2. **提 issue 求作者**——但**作者是瓶颈**
 3. 用兜底的临时工作流
 
-> **ACT 是给"有能力定义自己工作流的人"的工具。**
+> **LLMR 是给"有能力定义自己工作流的人"的工具。**
 >
-> 这是明确的设计取舍，不是待修的缺陷。想让 AI 替你决定一切的人，不该用 ACT——市场上那样的产品已经很多了。
+> 这是明确的设计取舍，不是待修的缺陷。想让 AI 替你决定一切的人，不该用 LLMR——市场上那样的产品已经很多了。
 
 ---
 
@@ -192,10 +214,10 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 | 我想… | 看 |
 |---|---|
-| 搞懂 ACT 是什么、为什么这么设计 | **[`ACT-设计规格.md`](ACT-设计规格.md)** ← 唯一权威规格 |
-| 看结构约束（机器可读） | [`act.schema.json`](act.schema.json) ← v1.0，已冻结 |
-| 看声明语法与 17 项校验细则 | [`ACT-声明格式规格-02.md`](ACT-声明格式规格-02.md) |
-| 看 17 项检查的算法与错误码目录 | [`ACT-校验器规格.md`](ACT-校验器规格.md) |
+| 搞懂 LLMR 是什么、为什么这么设计 | **[`LLMR-设计规格.md`](LLMR-设计规格.md)** ← 唯一权威规格 |
+| 看结构约束（机器可读） | [`llmr.schema.json`](llmr.schema.json) ← v1.0，已冻结 |
+| 看声明语法与 17 项校验细则 | [`LLMR-声明格式规格-02.md`](LLMR-声明格式规格-02.md) |
+| 看 17 项检查的算法与错误码目录 | [`LLMR-校验器规格.md`](LLMR-校验器规格.md) |
 | 抄一个能干活的真货 | [`swfs/homework.swf.json`](swfs/homework.swf.json) |
 | 看实测证据、缺陷清单、当前状态 | [`docs/开发记录.md`](docs/开发记录.md) |
 | 看被取代的旧设计（过程记录） | [`docs/history/`](docs/history/) |
@@ -206,21 +228,21 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 一个项目愿意不做什么，比它宣称能做什么更能说明它是谁。
 
-> **ACT 只做「把 SWF 跑起来」这一件事，其余全用现成的。**
+> **LLMR 只做「把 SWF 跑起来」这一件事，其余全用现成的。**
 
 编辑界面、权限引擎、记忆库、**嵌套**、训练平台、性能框架、专家路由——
-**不在 ACT 的范围里，ACT 也不逐项权衡它们。**
-在那些方向上，ACT 借用宿主已有的东西：会话、工具与插件、模型路由、界面槽位、大块内容存储。
+**不在 LLMR 的范围里，LLMR 也不逐项权衡它们。**
+在那些方向上，LLMR 借用宿主已有的东西：会话、工具与插件、模型路由、界面槽位、大块内容存储。
 
 而「不做嵌套」这一条有个**副作用**，值得单独写出来，因为它是个陷阱：
 
-> 嵌套会**击穿** ACT 的审查机制——子 SWF 里的工具绑不进父的能力表面，而审查哈希只覆盖父。
+> 嵌套会**击穿** LLMR 的审查机制——子 SWF 里的工具绑不进父的能力表面，而审查哈希只覆盖父。
 > **改子 SWF 不改哈希 → 审查被绕过。**
 >
-> ACT 的答案是**不做嵌套**。任何要做嵌套的系统，都必须让
+> LLMR 的答案是**不做嵌套**。任何要做嵌套的系统，都必须让
 > **能力表面递归展开、哈希覆盖整棵子树**——否则"可审查"这个承诺在嵌套出现的第一天就失效了。
 
-这条不是理论推演：它是 ACT 在设计能力表面时**被自己的机制逼出来的结论**。
+这条不是理论推演：它是 LLMR 在设计能力表面时**被自己的机制逼出来的结论**。
 
 ---
 
@@ -242,16 +264,16 @@ WebUI 起来了就能点着走完整个流程——**默认 echo 后端，不产
 
 ### English
 
-**ACT turns agent workflows into data you can read, review, and version — instead of letting the model improvise.**
+**LLMR turns agent workflows into data you can read, review, and version — instead of letting the model improvise.**
 
-Every other agent framework is adding autonomy. ACT removes it: a human writes a fixed workflow (an **SWF**), the model only executes the narrow slice it is assigned inside an isolated container (**AMZ**). No dynamic tool selection, no tool table in context, no cross-container leakage.
+Every other agent framework is adding autonomy. LLMR removes it: a human writes a fixed workflow (an **SWF**), the model only executes the narrow slice it is assigned inside an isolated container (**AMZ**). No dynamic tool selection, no tool table in context, no cross-container leakage.
 
 Zero runtime dependencies. 240 passing assertions. Schema frozen at v1.0. The whole runtime — validator, loader, executor, WebUI — is ~3,900 lines of plain JavaScript.
 
-Start here: **[`ACT-设计规格.md`](ACT-设计规格.md)** — the single authoritative spec (Chinese).
+Start here: **[`LLMR-设计规格.md`](LLMR-设计规格.md)** — the single authoritative spec (Chinese).
 
 </div>
 
 ---
 
-<div align="center"><sub>MIT © 2026 LLYlab · ACT 不依赖 DSH，前后端都能独立运行</sub></div>
+<div align="center"><sub>MIT © 2026 LLYlab · LLMR 不依赖 DSH，前后端都能独立运行</sub></div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// ACT 执行器 + 后端自测
+// LLMR 执行器 + 后端自测
 // 用法：node executor.selftest.cjs
 
 const loader = require('./loader.cjs')
@@ -358,7 +358,7 @@ const main = async () => {
     const fs = require('node:fs')
     const path = require('node:path')
     const os = require('node:os')
-    const f = path.join(os.tmpdir(), 'act-bom-test.json')
+    const f = path.join(os.tmpdir(), 'llmr-bom-test.json')
     fs.writeFileSync(f, '\uFEFF{"swf":{"id":"bom","amz":[]}}', 'utf8')
     const p = loader.prepare(f)
     eq('带 BOM 的声明可读', p.swf.id, 'bom')

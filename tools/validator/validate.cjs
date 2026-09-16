@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 'use strict'
-// ACT 校验器 · 阶段 0
+// LLMR 校验器 · 阶段 0
 // 用法：node validate.cjs <target> [--schema=path] [--mode=author|export|import]
 //                              [--lib=dir] [--tools=json] [--pages=json] [--json]
 //
-// 管线见 ACT-校验器规格.md §2：[1] 加载 → [2] 结构校验 → [3] 语义校验 → [4] 产出
+// 管线见 LLMR-校验器规格.md §2：[1] 加载 → [2] 结构校验 → [3] 语义校验 → [4] 产出
 
 const fs = require('node:fs')
 const path = require('node:path')
 const { runChecks } = require('./checks.cjs')
 
 // ── 共享件：依赖解析、读声明、读库（全部来自阶段 1 加载器）──
-const loader = require('../act/loader.cjs')
+const loader = require('../llmr/loader.cjs')
 
 function loadAjv () {
   const mod = loader.resolveDep('ajv/dist/2020')
@@ -69,7 +69,7 @@ function condenseAjvErrors (raw) {
     let hint
     if (branch && branch.params.failingKeyword) hint = `failingKeyword=${branch.params.failingKeyword}`
     if (folded > 0) hint = (hint ? hint + '；' : '') + `同路径另有 ${folded} 条分支错误已折叠`
-    out.push({ code: 'ACT-E001', path: p, message: primary.message, hint })
+    out.push({ code: 'LLMR-E001', path: p, message: primary.message, hint })
   }
   return out
 }
@@ -84,7 +84,7 @@ function main () {
   }
 
   const mode = args.mode || 'author'
-  const schemaPath = args.schema || path.join(__dirname, '..', '..', 'act.schema.json')
+  const schemaPath = args.schema || path.join(__dirname, '..', '..', 'llmr.schema.json')
 
   let doc
   try { doc = readTarget(target) } catch (e) {
@@ -104,14 +104,14 @@ function main () {
     if (!validate(doc)) errors.push(...condenseAjvErrors(validate.errors))
     schemaChecked = true
   } else {
-    warnings.push({ code: 'ACT-W000', path: '-', message: 'ajv 或 schema 不可用，已跳过结构校验' })
+    warnings.push({ code: 'LLMR-W000', path: '-', message: 'ajv 或 schema 不可用，已跳过结构校验' })
   }
 
   // [3] 语义校验 —— 结构不合法即中止（规格 §2：继续只会产生噪音）
   const swf = doc && doc.swf ? doc.swf : doc
   let result = { surface: [], surfaceHash: '-', entry: undefined }
   if (errors.length) {
-    warnings.push({ code: 'ACT-W000', path: '-', message: '结构校验未通过，已跳过语义检查（避免噪音）' })
+    warnings.push({ code: 'LLMR-W000', path: '-', message: '结构校验未通过，已跳过语义检查（避免噪音）' })
   } else {
     try {
       result = runChecks(swf, {
@@ -123,7 +123,7 @@ function main () {
       errors.push(...result.errors)
       warnings.push(...result.warnings)
     } catch (e) {
-      errors.push({ code: 'ACT-E999', path: '/', message: `校验器内部错误：${e.message}` })
+      errors.push({ code: 'LLMR-E999', path: '/', message: `校验器内部错误：${e.message}` })
     }
   }
 
@@ -131,7 +131,7 @@ function main () {
   if (args.json) {
     console.log(JSON.stringify({ ok: errors.length === 0, mode, target, errors, warnings, surface: result.surface, surfaceHash: result.surfaceHash, entry: result.entry }, null, 2))
   } else {
-    console.log(`ACT 校验器 · mode=${mode}${schemaChecked ? '' : '（无结构校验）'}`)
+    console.log(`LLMR 校验器 · mode=${mode}${schemaChecked ? '' : '（无结构校验）'}`)
     console.log(`目标: ${target}\n`)
 
     if (errors.length) {

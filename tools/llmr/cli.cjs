@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'
-// ACT 阶段 1 加载器 · 命令行
+// LLMR 阶段 1 加载器 · 命令行
 //
 // 用法：
 //   node cli.cjs <decl.json|yml> [--lib=dir]          打印摘要（默认）
@@ -35,7 +35,7 @@ function main () {
     process.exit(2)
   }
 
-  // ── 前端用的机器接口（与 ACT WebUI 共用 view.cjs 一份实现）──
+  // ── 前端用的机器接口（与 LLMR WebUI 共用 view.cjs 一份实现）──
   if (args.view) {
     const { viewOf } = require('./view.cjs')
     const view = viewOf(target, { libraryDir: args.lib })
@@ -53,7 +53,7 @@ function main () {
     return
   }
 
-  console.log('ACT 加载器')
+  console.log('LLMR 加载器')
   console.log(`源: ${target}`)
   console.log(`库: ${args.lib || '(未指定)'}`)
   console.log('')

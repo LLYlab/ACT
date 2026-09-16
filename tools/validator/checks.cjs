@@ -1,9 +1,9 @@
 'use strict'
-// ACT 语义校验：ACT-校验器规格.md §3 的 17 项检查
+// LLMR 语义校验：LLMR-校验器规格.md §3 的 17 项检查
 const crypto = require('node:crypto')
-const expr = require('../act/expression.cjs')
+const expr = require('../llmr/expression.cjs')
 
-// ── 工具类别表（ACT-校验器规格.md §3 #1）────────────────────────────────
+// ── 工具类别表（LLMR-校验器规格.md §3 #1）────────────────────────────────
 const TOOL_CLASSES = {
   exec: ['pwsh', 'bash', 'run_code', 'cmd', 'dlt_run', 'dlt_build'],
   'fs-write': ['write', 'edit', 'dlt_doc_write'],
@@ -26,7 +26,7 @@ const LIT_OF = { number: 'int', string: 'text', bool: 'bool', array: 'refs' }
 // runChecks 是导出的库函数，会被「阶段 1 加载器」「编辑器」直接调用，
 // 不保证经过 CLI 的 schema 前置门。它应当**总是返回报告**，而不是抛 TypeError。
 // 归一与 $ref 解析只保留一份实现（loader），避免两处各写一份而悄悄漂移。
-const { asArray, asObject, resolveAmz } = require('../act/loader.cjs')
+const { asArray, asObject, resolveAmz } = require('../llmr/loader.cjs')
 
 // ── 能力表面 + 哈希（§5）────────────────────────────────────────────────
 function buildSurface (amzs) {
@@ -70,23 +70,23 @@ function runChecks (input, opts = {}) {
 
   const byId = new Map()
   for (const a of amzs) {
-    if (byId.has(a.id)) E('ACT-E110', `${a.path}/id`, `AMZ id 重复：${a.id}`)
+    if (byId.has(a.id)) E('LLMR-E110', `${a.path}/id`, `AMZ id 重复：${a.id}`)
     else byId.set(a.id, a)
   }
 
   const terminal = asArray(swf.terminal)
-  for (const t of terminal) if (!byId.has(t)) E('ACT-E105', '/swf/terminal', `terminal 里的 AMZ 不存在：${t}`)
+  for (const t of terminal) if (!byId.has(t)) E('LLMR-E105', '/swf/terminal', `terminal 里的 AMZ 不存在：${t}`)
 
   // ── 解析边 ──
   const edges = asArray(swf.order).map((e, i) => ({ ...asObject(e), path: `/swf/order/${i}` }))
   for (const e of edges) {
-    if (!byId.has(e.from)) E('ACT-E105', `${e.path}/from`, `边引用的 AMZ 不存在：${e.from}`)
-    if (!byId.has(e.to)) E('ACT-E105', `${e.path}/to`, `边引用的 AMZ 不存在：${e.to}`)
-    if (e.else !== undefined && !byId.has(e.else)) E('ACT-E105', `${e.path}/else`, `else 引用的 AMZ 不存在：${e.else}`)
+    if (!byId.has(e.from)) E('LLMR-E105', `${e.path}/from`, `边引用的 AMZ 不存在：${e.from}`)
+    if (!byId.has(e.to)) E('LLMR-E105', `${e.path}/to`, `边引用的 AMZ 不存在：${e.to}`)
+    if (e.else !== undefined && !byId.has(e.else)) E('LLMR-E105', `${e.path}/else`, `else 引用的 AMZ 不存在：${e.else}`)
     try {
       e._ast = expr.parse(e.when)
     } catch (err) {
-      E('ACT-E103', `${e.path}/when`, `when 文法非法：${err.message}`)
+      E('LLMR-E103', `${e.path}/when`, `when 文法非法：${err.message}`)
     }
   }
 
@@ -99,10 +99,10 @@ function runChecks (input, opts = {}) {
   for (const [from, g] of groups) {
     const elseCount = g.filter((e) => e.else !== undefined).length
     if (g.length > 1 && elseCount === 0) {
-      E('ACT-E101', '/swf/order', `节点 ${from} 有多条出边但没有 else 兜底`, '求值失败时无处可去；补一条 else')
+      E('LLMR-E101', '/swf/order', `节点 ${from} 有多条出边但没有 else 兜底`, '求值失败时无处可去；补一条 else')
     }
     if (elseCount > 1) {
-      E('ACT-E102', '/swf/order', `节点 ${from} 有 ${elseCount} 条 else，兜底歧义`)
+      E('LLMR-E102', '/swf/order', `节点 ${from} 有 ${elseCount} 条 else，兜底歧义`)
     }
   }
 
@@ -114,19 +114,19 @@ function runChecks (input, opts = {}) {
     if (!e._ast) continue
     const ns = expr.namespacesOf(e._ast)
     for (const bad of expr.badIdentsOf(e._ast, ALL_NS)) {
-      E('ACT-E104', `${e.path}/when`, `变量名非法：${bad}`, `合法命名空间：${ALL_NS.join(' / ')}`)
+      E('LLMR-E104', `${e.path}/when`, `变量名非法：${bad}`, `合法命名空间：${ALL_NS.join(' / ')}`)
     }
     const lvl = e.level
     if (lvl === 1) {
       const off = [...ns].filter((n) => !DETERMINISTIC.includes(n))
-      if (off.length) E('ACT-E104', `${e.path}/level`, `level:1 不允许使用 ${off.join(', ')}`, '级 1 只能用 artifact. / run. / args.')
+      if (off.length) E('LLMR-E104', `${e.path}/level`, `level:1 不允许使用 ${off.join(', ')}`, '级 1 只能用 artifact. / run. / args.')
     } else if ([2, 3, 4].includes(lvl)) {
       const onlyDet = ns.size > 0 && [...ns].every((n) => DETERMINISTIC.includes(n))
       if (onlyDet) {
-        W('ACT-W202', `${e.path}/level`, `level:${lvl} 只用到确定性变量，应降为 level:1`, '级 1 零成本，无需模型参与')
+        W('LLMR-W202', `${e.path}/level`, `level:${lvl} 只用到确定性变量，应降为 level:1`, '级 1 零成本，无需模型参与')
       } else {
         const off = [...ns].filter((n) => !SIGNAL.includes(n))
-        if (off.length) E('ACT-E104', `${e.path}/level`, `level:${lvl} 不允许使用 ${off.join(', ')}`, '级 2-4 只能用 signal.')
+        if (off.length) E('LLMR-E104', `${e.path}/level`, `level:${lvl} 不允许使用 ${off.join(', ')}`, '级 2-4 只能用 signal.')
       }
     }
   }
@@ -139,21 +139,21 @@ function runChecks (input, opts = {}) {
     const declared = (up.amz.output && up.amz.output.signal && up.amz.output.signal.fields) || null
     for (const f of expr.signalFieldsOf(e._ast)) {
       if (!declared || !(f in declared)) {
-        E('ACT-E106', `${e.path}/when`, `signal.${f} 未由 ${e.from} 的 output.signal.fields 声明`, '在上游 AMZ 里声明该字段')
+        E('LLMR-E106', `${e.path}/when`, `signal.${f} 未由 ${e.from} 的 output.signal.fields 声明`, '在上游 AMZ 里声明该字段')
         continue
       }
       const want = declared[f]
       for (const a of expr.atomsOf(e._ast)) {
         if (a.ident !== `signal.${f}`) continue
         if (a.op === null) {
-          if (want !== 'bool') E('ACT-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，不能单独作为条件（只有 bool 可以）`, `写成 signal.${f} == <值>`)
+          if (want !== 'bool') E('LLMR-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，不能单独作为条件（只有 bool 可以）`, `写成 signal.${f} == <值>`)
           continue
         }
         const got = LIT_OF[a.literal.type]
         if (a.op === '>' || a.op === '<') {
-          if (want !== 'int') E('ACT-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，不能用 > / < 比较`)
+          if (want !== 'int') E('LLMR-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，不能用 > / < 比较`)
         } else if (want !== got) {
-          E('ACT-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，字面量是 ${got}`)
+          E('LLMR-E106', `${e.path}/when`, `signal.${f} 声明为 ${want}，字面量是 ${got}`)
         }
       }
     }
@@ -164,7 +164,7 @@ function runChecks (input, opts = {}) {
     if (![2, 3, 4].includes(e.level)) continue
     const up = byId.get(e.from)
     if (up && !(up.amz.output && up.amz.output.signal)) {
-      E('ACT-E111', `${up.path}/output`, `${e.from} 有 level:${e.level} 的出边，但没有 output.signal`)
+      E('LLMR-E111', `${up.path}/output`, `${e.from} 有 level:${e.level} 的出边，但没有 output.signal`)
     }
   }
 
@@ -174,7 +174,7 @@ function runChecks (input, opts = {}) {
   for (const e of edges) { targets.add(e.to); if (e.else !== undefined) targets.add(e.else) }
   const candidates = [...froms].filter((n) => !targets.has(n))
   if (candidates.length !== 1) {
-    E('ACT-E107', '/swf/order', `入口不唯一：${candidates.length} 个${candidates.length ? '（' + candidates.join(', ') + '）' : ''}`, '应有且仅有一个从未作为目标出现的节点')
+    E('LLMR-E107', '/swf/order', `入口不唯一：${candidates.length} 个${candidates.length ? '（' + candidates.join(', ') + '）' : ''}`, '应有且仅有一个从未作为目标出现的节点')
   }
   const entry = candidates[0]
 
@@ -195,11 +195,11 @@ function runChecks (input, opts = {}) {
     }
   }
   for (const a of amzs) {
-    if (entry && !reach.has(a.id)) W('ACT-W203', a.path, `不可达：${a.id}`, '从入口出发无法到达')
+    if (entry && !reach.has(a.id)) W('LLMR-W203', a.path, `不可达：${a.id}`, '从入口出发无法到达')
     const hasOut = (adj.get(a.id) || []).length > 0
     const isTerm = terminal.includes(a.id)
-    if (!hasOut && !isTerm) E('ACT-E108', a.path, `${a.id} 无出边且不在 terminal 中`)
-    if (hasOut && isTerm) W('ACT-W204', a.path, `${a.id} 在 terminal 中但有出边`)
+    if (!hasOut && !isTerm) E('LLMR-E108', a.path, `${a.id} 无出边且不在 terminal 中`)
+    if (hasOut && isTerm) W('LLMR-W204', a.path, `${a.id} 在 terminal 中但有出边`)
   }
 
   // ── #17 环检测 ──
@@ -209,7 +209,7 @@ function runChecks (input, opts = {}) {
   //
   // ⚠ 用显式栈，不用递归。
   // 节点数由文档决定，恶意/超大文档能把递归 DFS 直接压爆（这个项目已经因为
-  // 「畸形输入压爆调用栈」吃过一次亏，见 ACT-校验器规格 §4.1.1 的解析上限）。
+  // 「畸形输入压爆调用栈」吃过一次亏，见 LLMR-校验器规格 §4.1.1 的解析上限）。
   //
   // 起点集合：**不管入口唯不唯一都要查**。
   // 环只要含入口，就必然让入口不再唯一（入口同时是别人的目标），E107 会先响——
@@ -256,11 +256,11 @@ function runChecks (input, opts = {}) {
     }
 
     for (const cyc of cycles.slice(0, 5)) {
-      E('ACT-E113', '/swf/order', `存在环：${cyc.join(' → ')} → ${cyc[0]}`,
+      E('LLMR-E113', '/swf/order', `存在环：${cyc.join(' → ')} → ${cyc[0]}`,
         'SWF 必须是有尽头的流程；环到运行期只会以「超过最大步数」的形式暴露')
     }
     if (cycles.length > 5) {
-      E('ACT-E113', '/swf/order', `还有 ${cycles.length - 5} 个环未列出`, '先修上面几个，再重新校验')
+      E('LLMR-E113', '/swf/order', `还有 ${cycles.length - 5} 个环未列出`, '先修上面几个，再重新校验')
     }
   }
 
@@ -270,20 +270,20 @@ function runChecks (input, opts = {}) {
     const classes = new Set(tools.map(classifyTool))
     const execs = tools.filter((t) => classifyTool(t) === 'exec')
     if (classes.has('exec')) {
-      W('ACT-W201', `${a.path}/tools`, `${a.id} 含 exec 类工具（${execs.join(', ')}）`, '会话 sandbox 不是 per-AMZ 的，该 AMZ 继承的是整个会话的 sandbox 模式')
+      W('LLMR-W201', `${a.path}/tools`, `${a.id} 含 exec 类工具（${execs.join(', ')}）`, '会话 sandbox 不是 per-AMZ 的，该 AMZ 继承的是整个会话的 sandbox 模式')
     }
     if (classes.has('exec') && classes.has('artifact')) {
-      W('ACT-W206', `${a.path}/tools`, `${a.id} 同时含 exec 与 artifact 类工具`, 'CSP 保证被削弱：TWF 不提权，但一句被改过的 prompt 就能让它用 exec 做设计者没打算的事')
+      W('LLMR-W206', `${a.path}/tools`, `${a.id} 同时含 exec 与 artifact 类工具`, 'CSP 保证被削弱：TWF 不提权，但一句被改过的 prompt 就能让它用 exec 做设计者没打算的事')
     }
     if (toolRegistry) {
-      for (const t of tools) if (!toolRegistry.has(t)) E('ACT-E105', `${a.path}/tools`, `工具不存在：${t}`, '当前 DSH 的工具表里没有这个名字')
+      for (const t of tools) if (!toolRegistry.has(t)) E('LLMR-E105', `${a.path}/tools`, `工具不存在：${t}`, '当前 DSH 的工具表里没有这个名字')
     }
   }
 
   // ── #10 step 提示 ──
   const steps = amzs.filter((a) => asObject(a.amz).kind === 'step')
   if (steps.length) {
-    W('ACT-W205', '/swf/amz', `存在 ${steps.length} 个 step 型 AMZ`, 'step 注入 TCP/SCP 会让请求从第 0 位分叉，继承来的历史吃不到前缀缓存。它的价值是信息保真，不是省钱。')
+    W('LLMR-W205', '/swf/amz', `存在 ${steps.length} 个 step 型 AMZ`, 'step 注入 TCP/SCP 会让请求从第 0 位分叉，继承来的历史吃不到前缀缓存。它的价值是信息保真，不是省钱。')
   }
 
   // ── #16 引用项必须自带 model ──
@@ -293,14 +293,14 @@ function runChecks (input, opts = {}) {
   // 而设计者多半以为 SWF 的 defaults 管住了它。
   for (const a of amzs) {
     if (a.fromRef && asObject(a.amz).model === undefined) {
-      W('ACT-W207', `${a.path}/$ref`, `$ref 引入的 ${a.id} 未声明 model`, 'SWF 的 defaults 不作用于引用项，它会回退到部署默认模型。请在库中的该 AMZ 上声明 model，或就地内联')
+      W('LLMR-W207', `${a.path}/$ref`, `$ref 引入的 ${a.id} 未声明 model`, 'SWF 的 defaults 不作用于引用项，它会回退到部署默认模型。请在库中的该 AMZ 上声明 model，或就地内联')
     }
   }
 
   // ── #5 UI 页面组 ──
   const ui = asObject(swf.ui)
   if (uiPages && Array.isArray(ui.page)) {
-    for (const p of ui.page) if (!uiPages.has(p)) E('ACT-E105', '/swf/ui/page', `页面组不存在：${p}`)
+    for (const p of ui.page) if (!uiPages.has(p)) E('LLMR-E105', '/swf/ui/page', `页面组不存在：${p}`)
   }
 
   // ── 能力表面 ──
@@ -311,16 +311,16 @@ function runChecks (input, opts = {}) {
   if (mode === 'import') {
     const rev = swf._review
     if (!rev || !rev.surfaceHash) {
-      E('ACT-E109', '/swf/_review', '导入的 SWF 未经人工复核（缺 _review.surfaceHash）', '审查能力表面后写入 _review')
+      E('LLMR-E109', '/swf/_review', '导入的 SWF 未经人工复核（缺 _review.surfaceHash）', '审查能力表面后写入 _review')
     } else if (rev.surfaceHash !== hash) {
-      E('ACT-E109', '/swf/_review/surfaceHash', '能力表面哈希不符：导出后被改动过', `当前 ${hash}，凭据 ${rev.surfaceHash}`)
+      E('LLMR-E109', '/swf/_review/surfaceHash', '能力表面哈希不符：导出后被改动过', `当前 ${hash}，凭据 ${rev.surfaceHash}`)
     }
   }
 
   // ── #14 导出不得残留 $ref ──
   if (mode === 'export') {
     asArray(swf.amz).forEach((e, i) => {
-      if (e && typeof e === 'object' && '$ref' in e) E('ACT-E112', `/swf/amz/${i}`, '导出产物仍含未解析的 $ref')
+      if (e && typeof e === 'object' && '$ref' in e) E('LLMR-E112', `/swf/amz/${i}`, '导出产物仍含未解析的 $ref')
     })
   }
 
@@ -338,23 +338,23 @@ function runChecks (input, opts = {}) {
  * 所以：项数从这里来，文档只能与它一致。加检查 = 在这里加一行 + 在规格表里加一行。
  */
 const CHECKS = [
-  { n: 1, codes: ['ACT-W201', 'ACT-W206'], title: '工具面安全' },
-  { n: 2, codes: ['ACT-E101', 'ACT-E102'], title: '分支边组必须有 else' },
-  { n: 3, codes: ['ACT-E103'], title: 'when 文法合法且标明 level' },
-  { n: 4, codes: ['ACT-W202'], title: 'level>=2 但只用确定性变量' },
-  { n: 5, codes: ['ACT-E105'], title: '引用存在性' },
-  { n: 6, codes: ['ACT-E106'], title: 'signal 字段一致与类型' },
-  { n: 7, codes: ['ACT-E107', 'ACT-W203'], title: '入口唯一与可达性' },
-  { n: 8, codes: ['ACT-E108', 'ACT-W204'], title: '终态一致性' },
-  { n: 9, codes: ['ACT-E109'], title: '导入复核' },
-  { n: 10, codes: ['ACT-W205'], title: 'step 的缓存提示' },
+  { n: 1, codes: ['LLMR-W201', 'LLMR-W206'], title: '工具面安全' },
+  { n: 2, codes: ['LLMR-E101', 'LLMR-E102'], title: '分支边组必须有 else' },
+  { n: 3, codes: ['LLMR-E103'], title: 'when 文法合法且标明 level' },
+  { n: 4, codes: ['LLMR-W202'], title: 'level>=2 但只用确定性变量' },
+  { n: 5, codes: ['LLMR-E105'], title: '引用存在性' },
+  { n: 6, codes: ['LLMR-E106'], title: 'signal 字段一致与类型' },
+  { n: 7, codes: ['LLMR-E107', 'LLMR-W203'], title: '入口唯一与可达性' },
+  { n: 8, codes: ['LLMR-E108', 'LLMR-W204'], title: '终态一致性' },
+  { n: 9, codes: ['LLMR-E109'], title: '导入复核' },
+  { n: 10, codes: ['LLMR-W205'], title: 'step 的缓存提示' },
   { n: 11, codes: [], title: 'CSP_AMZ 越权（由 schema 覆盖）' },
-  { n: 12, codes: ['ACT-E110'], title: 'AMZ id 冲突' },
-  { n: 13, codes: ['ACT-E111'], title: '有分支出边但无 output.signal' },
-  { n: 14, codes: ['ACT-E112'], title: '导出不得残留 $ref' },
-  { n: 15, codes: ['ACT-E104'], title: 'level 与命名空间不匹配' },
-  { n: 16, codes: ['ACT-W207'], title: '引用项必须自带 model' },
-  { n: 17, codes: ['ACT-E113'], title: '环检测' },
+  { n: 12, codes: ['LLMR-E110'], title: 'AMZ id 冲突' },
+  { n: 13, codes: ['LLMR-E111'], title: '有分支出边但无 output.signal' },
+  { n: 14, codes: ['LLMR-E112'], title: '导出不得残留 $ref' },
+  { n: 15, codes: ['LLMR-E104'], title: 'level 与命名空间不匹配' },
+  { n: 16, codes: ['LLMR-W207'], title: '引用项必须自带 model' },
+  { n: 17, codes: ['LLMR-E113'], title: '环检测' },
 ]
 
 module.exports = { runChecks, buildSurface, surfaceHash, canonicalize, classifyTool, TOOL_CLASSES, CHECKS }

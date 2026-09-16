@@ -1,4 +1,4 @@
-# ACT 的 SWF 库
+# LLMR 的 SWF 库
 
 这里放**真实使用的工作流**（不是 `verify/` 里那些测试夹具）。
 
@@ -36,7 +36,7 @@ judge_task ──[signal.is_homework == true]──▶ extract_info ──[signa
 ```
 
 > **每次运行都必然经过第 3 步的暂停**——这是设计，不是意外。
-> 「确认」用 `signal.ask` 表达，**不动 schema**；见 `ACT-设计规格.md` §16.3。
+> 「确认」用 `signal.ask` 表达，**不动 schema**；见 `LLMR-设计规格.md` §16.3。
 
 | AMZ | 型 | 干什么 | 工具 |
 |---|---|---|---|
@@ -93,7 +93,7 @@ $ node tools/validator/validate.cjs swfs/homework.swf.json
 结果: 通过（0 错误 / 4 警告）
 ```
 
-4 条警告都是 **`ACT-W201`**：`draw_figures` / `render_docx` / `fix_formulas` / `verify_docx`
+4 条警告都是 **`LLMR-W201`**：`draw_figures` / `render_docx` / `fix_formulas` / `verify_docx`
 带 `dlt_run` / `pwsh`，属于 **exec 类工具**。
 
 > **这是校验器在正确工作，不是误报。** 这几个盒子继承了整个会话的 sandbox，
@@ -103,7 +103,7 @@ $ node tools/validator/validate.cjs swfs/homework.swf.json
 ### 实测（echo 后端，不花钱）
 
 ```
-$ node tools/act/homework.smoke.cjs
+$ node tools/llmr/homework.smoke.cjs
 通过 19 / 失败 0
 
 第一次运行：judge_task → extract_info → confirm_homework        （暂停）
@@ -118,4 +118,4 @@ OMML 0：     …render_docx → fix_formulas → verify_docx → show_result
 ```
 
 同一份声明也能在 WebUI 里点着走完（真点了：暂停卡 → 确认，继续 → 成品页）。
-`tools/act/uidemo.cjs` 另出一份静态页，供无头 Edge 出图比对版式。
+`tools/llmr/uidemo.cjs` 另出一份静态页，供无头 Edge 出图比对版式。

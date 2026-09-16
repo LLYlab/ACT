@@ -1,7 +1,7 @@
-# ACT 设计评审 · 第一轮
+# LLMR 设计评审 · 第一轮
 
 > 本文是聊天窗口里渲染丢失的那条回复的完整重建版。
-> 对象：ACT（Agent Character Tool）第二轮设计——AMZ / SWF / 四型 AMZ / 5 种截取。
+> 对象：LLMR（Agent Character Tool）第二轮设计——AMZ / SWF / 四型 AMZ / 5 种截取。
 > 所有"官方已有什么"的结论都来自 DSH 运行时实际契约查询，不是推测。
 
 ---
@@ -75,7 +75,7 @@ remoteView   (agent) -> { members, tasks }        // 已经是 Remote API
 > `dsh-tool-cordis` 的 Inspect 里 —— 也就是说它是**类型/契约层已定义、运行时未装载**。
 > 要确认只需把 `@deepseek-ai/dsh-experimental-agent-team` 装进 web profile 重启即可。
 
-**所以结论不是"别做了"，而是**：ACT 的 SWF/AMZ 要么直接复用这个 seam，要么必须明确讲清差异——
+**所以结论不是"别做了"，而是**：LLMR 的 SWF/AMZ 要么直接复用这个 seam，要么必须明确讲清差异——
 否则是在重造一个官方正在建的轮子。
 
 ### 事实 B：截取方式 ①②③ 有原生机制，④ 没有
