@@ -1,0 +1,125 @@
+{
+  "swf": {
+    "id": "coding_auto_run",
+    "version": 1,
+    "title": "自动改代码 · Coding AutoRun",
+    "invoke": {
+      "tags": ["改代码", "实现需求", "自动", "autorun", "跑一遍", "修", "coding", "重构"],
+      "when": "你只说清要什么，不看中间源码——它自己去读、去改、去自检，改坏了自己回头修（最多 3 轮），最后给你一份变更摘要",
+      "args": [
+        { "name": "repo", "type": "text", "required": true },
+        { "name": "goal", "type": "text", "required": true }
+      ]
+    },
+    "defaults": { "model": "deepseek-v4-flash" },
+    "amz": [
+      {
+        "id": "recv_goal",
+        "kind": "exp",
+        "prompt": "接下这个任务。把「要什么」和「不许动什么」理清楚，用两三句话复述一遍确认没歪。不要动手改任何东西。",
+        "tools": [],
+        "output": { "body": "free", "signal": { "fields": { "understood": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "recon",
+        "kind": "exp",
+        "prompt": "只读侦察：读目录树、找相关文件、定位这次改动的影响面。\n没有动手改之前，明确回答一件事——**信息够不够开工**？\n不够就报 need_clarify=true，并写清缺哪一条。",
+        "tools": ["list_dir", "read_file"],
+        "model": "deepseek-v4-pro",
+        "output": { "body": "free", "signal": { "fields": { "working": "bool", "need_clarify": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "clarify",
+        "kind": "exp",
+        "prompt": "信息不够。把你要问 user 的那一句写清楚（一句话，具体到能被回答），放进信号块。\n不要猜，不要挑一个「大概对」的方案先干起来。",
+        "tools": [],
+        "output": { "body": "free", "signal": { "fields": { "ask": "text" }, "encoder": "self" } }
+      },
+      {
+        "id": "plan",
+        "kind": "exp",
+        "prompt": "出改动计划：动哪些文件、每个文件干什么、用什么办法验证。\n计划要能被别人照着复现。信息足够开工就报 plan_ok=true。",
+        "tools": [],
+        "model": "deepseek-v4-pro",
+        "output": { "body": "free", "signal": { "fields": { "working": "bool", "plan_ok": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "implement",
+        "kind": "exp",
+        "prompt": "按计划施工。**你是这次唯一写文件的人**——把改动落到磁盘，并在信号里报出改了几个文件。\n不要顺手改计划外的文件。",
+        "tools": ["read_file", "write_file", "list_dir"],
+        "output": { "body": "free", "signal": { "fields": { "working": "bool", "file_count": "int" }, "encoder": "self" } }
+      },
+      {
+        "id": "verify",
+        "kind": "ttc",
+        "prompt": "自检：跑构建与测试。\n把真实输出读回来，不要凭印象判断。构建通过报 build_ok=true。",
+        "tools": ["run_shell", "read_file"],
+        "output": { "body": "free", "signal": { "fields": { "working": "bool", "build_ok": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "summarize",
+        "kind": "exp",
+        "prompt": "收尾。给用户一份**变更摘要**，不要贴整段源码：\n\n## 改了什么\n逐文件一行：改了什么、为什么\n\n## 怎么验的\n跑了什么、结果如何\n\n## 还需要你做的\n没有就写「没有」\n\n最后另起一段附一个 ```json 块，字段：files(int) 改动文件数、tests_passed(bool)。",
+        "tools": [],
+        "output": { "body": "text", "signal": { "fields": { "done": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "diagnose",
+        "kind": "exp",
+        "prompt": "（环控·自愈）构建挂了。读错误输出，定位到具体位置，说清「哪里错了、为什么错」。\n只诊断，先不要改。",
+        "tools": ["read_file", "run_shell"],
+        "model": "deepseek-v4-pro",
+        "output": { "body": "free", "signal": { "fields": { "diagnosed": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "patch",
+        "kind": "exp",
+        "prompt": "（环控·自愈）按诊断结果改。**只改导致失败的那一处**，不要顺手重构。改完落盘。",
+        "tools": ["read_file", "write_file"],
+        "output": { "body": "free", "signal": { "fields": { "patched": "bool" }, "encoder": "self" } }
+      },
+      {
+        "id": "give_up",
+        "kind": "exp",
+        "prompt": "计划阶段就发现不该做（信息不足/范围不明/风险太大）。说清为什么不做、需要用户先定什么。**不要硬着头皮上。**",
+        "tools": [],
+        "output": { "body": "text" }
+      },
+      {
+        "id": "abort",
+        "kind": "exp",
+        "prompt": "某一步失败了。报告：哪一步、失败信息、需要用户做什么。**不要重试、不要猜、不要跳过。**",
+        "tools": [],
+        "output": { "body": "text" }
+      }
+    ],
+    "order": [
+      { "from": "recv_goal", "to": "recon", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
+      { "from": "recon", "to": "clarify", "when": "signal.need_clarify == true", "level": 2, "else": "plan" },
+      { "from": "clarify", "to": "plan", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
+      { "from": "plan", "to": "implement", "when": "signal.plan_ok == true", "level": 2, "else": "give_up" },
+      { "from": "implement", "to": "verify", "when": "run.status == 'ok'", "level": 1, "else": "abort" },
+      { "from": "verify", "to": "summarize", "when": "signal.build_ok == true", "level": 2 }
+    ],
+    "terminal": ["summarize", "give_up", "abort"],
+    "pool": [
+      {
+        "id": "self_heal",
+        "on": "signal.build_ok == false",
+        "run": ["diagnose", "patch"],
+        "resume": "verify",
+        "maxRounds": 3,
+        "note": "改坏了自己回头修。环只允许出现在环控区——主流程 order 仍然无环。"
+      }
+    ],
+    "ui": {
+      "screens": [
+        { "id": "running", "title": "进行中", "entry": "ui/running.html", "when": "signal.working == true" },
+        { "id": "review", "title": "审阅", "entry": "ui/review.html", "when": "signal.done == true" },
+        { "id": "goal", "title": "目标", "entry": "ui/goal.html" }
+      ],
+      "fallback": "native"
+    }
+  }
+}

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>目标</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;max-width:820px;margin:0 auto;
+        padding:34px 30px 56px;width:100%}
+  .lead{font-size:22px;font-weight:660;letter-spacing:-.022em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 26px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:0 0 7px}
+  .actions{display:flex;gap:10px;align-items:center;margin-top:22px}
+
+  .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--llmr-line2);
+        font-size:12px;color:var(--llmr-muted);line-height:1.9}
+  .foot b{color:var(--llmr-fg2);font-weight:600}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="lead">要它做什么？</p>
+  <p class="say">说清目标和边界就行——中间的源码你不用看，它读、它改、它自检。</p>
+
+  <div class="field">
+    <label>仓库路径</label>
+    <input id="repo" class="llmr-input" type="text" placeholder="C:\path\to\repo" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>目标</label>
+    <textarea id="goal" rows="4" placeholder="例：把 Channel 抽成通用接口，别改调用方"></textarea>
+  </div>
+  <div class="field">
+    <label>不许动什么（可选）</label>
+    <input id="forbid" class="llmr-input" type="text" placeholder="例：不要动迁移脚本、不要升级依赖" autocomplete="off">
+  </div>
+
+  <div class="actions">
+    <button class="llmr-btn primary" id="go">开始</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+
+  <div class="foot">
+    <b>它自己会做：</b>只读侦察 → 出计划 → 施工 → 构建自检；<br>
+    构建挂了它会<b>自己回头修</b>（最多 3 轮，走环控区），修不动才来问你。<br>
+    <b>信息不够它会停下来问一句</b>——不会挑一个「大概对」的方案先干起来。
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+  var repo = $('#repo'), goal = $('#goal'), forbid = $('#forbid'), msg = $('#msg'), btn = $('#go')
+
+  llmr.ready().then(function (st) {
+    var a = (st && st.args) || {}
+    if (a.repo) repo.value = a.repo
+    if (a.goal) goal.value = a.goal
+    if (a.forbid) forbid.value = a.forbid
+  }).catch(function () {})
+
+  btn.onclick = function () {
+    var r = repo.value.trim(), g = goal.value.trim()
+    if (!r) { msg.textContent = '先给仓库路径'; repo.focus(); return }
+    if (!g) { msg.textContent = '先说清要什么'; goal.focus(); return }
+    btn.disabled = true
+    msg.textContent = '已交给它…'
+    var args = { repo: r, goal: g }
+    if (forbid.value.trim()) args.forbid = forbid.value.trim()
+    llmr.run(args).catch(function (e) {
+      btn.disabled = false
+      msg.textContent = String(e && e.message ? e.message : e)
+    })
+  }
+})()
+</script>
+</body>
+</html>

@@ -287,6 +287,16 @@
   .card.folded .foldline{display:flex}
   .rowline{display:flex;align-items:center;gap:12px}
   .rowline .btn{flex:none}
+  /* ── SWF 自带界面（iframe 宿主）── */
+  .page.nopad{max-width:none;padding:0;height:100%;display:flex;flex-direction:column}
+  .uibar{flex:none;display:flex;align-items:center;gap:10px;padding:10px 18px;
+        border-bottom:1px solid var(--line);background:rgba(10,14,21,.7);
+        backdrop-filter:blur(10px)}
+  .uibar .grow{flex:1}
+  /* sandbox="allow-scripts" 且**不给 allow-same-origin**：
+     页面拿到的是不透明源，摸不到宿主 DOM、localStorage、cookie。
+     它跟宿主说话的唯一通道是 postMessage。 */
+  .swfui{flex:1;width:100%;border:0;background:var(--bg);display:block}
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:9;
        background:var(--panel3);color:var(--fg);border:1px solid var(--line);
        padding:10px 20px;border-radius:10px;font-size:13px;box-shadow:var(--sh-lg);
@@ -484,10 +494,163 @@
     })
   }
 
+  // ══════════ SWF 自带界面（iframe 宿主）══════════
+  //
+  // 「当前该显示哪张页」**由服务器算**（它那边才有求值器）。宿主只负责：
+  // 把状态递进去、把请求接出来、按 stage 换页、挡住越界。
+  // 在浏览器里再实现一遍求值器 = 两份实现——两份实现迟早会飘。
+  var UIH = { frame: null, screenId: null, trace: [], last: null }
+
+  function screensOf () {
+    var ui = (S.view && S.view.swf && S.view.swf.ui) || {}
+    return Array.isArray(ui.screens) ? ui.screens : []
+  }
+  function fallbackScreen () {
+    var sc = screensOf()
+    for (var i = 0; i < sc.length; i++) if (sc[i].when === undefined) return sc[i]
+    return sc[0] || null
+  }
+  function uiState () {
+    return {
+      swf: (S.view && S.view.swf) || null,
+      args: S.runArgs || {},
+      screen: (S.view && S.view.screen) || UIH.screenId,
+      trace: UIH.trace,
+      status: UIH.last ? UIH.last.status : 'idle',
+      lastOutput: UIH.last ? UIH.last.finalOutput : null,
+      poolRounds: UIH.last ? UIH.last.poolRounds : null,
+      canRun: !!(S.agt && S.agt.swf),
+    }
+  }
+  function postToUi (type, payload, id) {
+    var f = UIH.frame
+    if (f && f.contentWindow) {
+      f.contentWindow.postMessage({ __llmr: 1, type: type, id: id, payload: payload }, '*')
+    }
+  }
+  function uiBase () {
+    var id = dash(((S.view || {}).swf || {}).id)
+    return '/ui/' + encodeURIComponent(id) + '/'
+  }
+  function safeEntry (e) {
+    // 校验器已经保证过；这里再挡一次——边界挡两道不亏
+    if (typeof e !== 'string' || !e) return 'index.html'
+    if (/^[\/\\]/.test(e) || e.indexOf('..') >= 0) return 'index.html'
+    return e
+  }
+
+  function paintSwfUi () {
+    var swf = (S.view && S.view.swf) || {}
+    var sc = (S.view && S.view.screen) || fallbackScreen()
+    var entry = safeEntry(sc && sc.entry)
+    UIH.screenId = sc ? sc.id : null
+    var h = '<div class="page nopad">'
+    h += '<div class="uibar"><span class="pill on">' + esc(dash(swf.title || swf.id)) + '</span>'
+    h += sc ? '<span class="pill">' + esc(sc.title) + '</span>' : ''
+    h += '<span class="grow"></span>'
+    h += '<span class="hint mono" style="font-size:11px">' + esc(uiBase() + entry) + '</span>'
+    h += '<button class="btn sm ghost" id="btnUiReload">重载界面</button></div>'
+    h += '<iframe class="swfui" id="swfui" sandbox="allow-scripts" src="' + esc(uiBase() + entry) + '"></iframe>'
+    h += '</div>'
+    $('#view').innerHTML = h
+    UIH.frame = $('#swfui')
+    $('#btnUiReload').onclick = function () {
+      $('#swfui').src = uiBase() + entry + '?r=' + Date.now()
+    }
+  }
+
+  function uiRun (args, startAt, confirm) {
+    if (!S.agt || !S.agt.swf) return Promise.reject(new Error('没有绑定 SWF'))
+    S.runArgs = args || {}
+    var useHttp = S.settings.backend === 'http'
+    var url = '/api/run?path=' + encodeURIComponent(S.agt.swf)
+      + '&args=' + encodeURIComponent(JSON.stringify(S.runArgs)) + dirQ()
+      + (useHttp ? '&backend=http' : '')
+    if (startAt) url += '&startAt=' + encodeURIComponent(startAt)
+    if (confirm !== undefined) url += '&confirm=' + encodeURIComponent(confirm)
+    return api(url).then(function (r) {
+      UIH.last = r
+      UIH.trace = (startAt && UIH.trace.length) ? UIH.trace.concat(r.trace || []) : (r.trace || [])
+      S.lastTrace = UIH.trace
+      if (r.screen) S.view.screen = r.screen
+      // 页面变了就换页——**SWF 自己的 HTML 决定它有几张页**
+      var next = r.screen
+      if (next && next.id !== UIH.screenId && UIH.frame) {
+        UIH.screenId = next.id
+        UIH.frame.src = uiBase() + safeEntry(next.entry)
+        var bar = document.querySelector('.uibar')
+        if (bar && sc) { /* 标题留到 state 里带过去 */ }
+      }
+      return r
+    })
+  }
+
+  function onUiMessage (ev) {
+    var m = ev.data
+    if (!m || m.__llmr !== 1) return
+    // **只认自己那个 iframe**：别的窗口递进来的消息一律不理
+    if (!UIH.frame || ev.source !== UIH.frame.contentWindow) return
+    var reply = function (payload, err) {
+      postToUi('reply', err ? undefined : payload, m.id)
+      if (err) postToUi('__err', null, m.id)
+    }
+    var fail = function (e) { postToUi('reply', undefined, m.id); postToUi('event', { name: 'error', data: { message: String(e && e.message ? e.message : e) } }) }
+
+    if (m.type === 'boot' || m.type === 'ready') {
+      var st = uiState()
+      reply(st)
+      postToUi('state', st)
+      return
+    }
+    if (m.type === 'log') { console.log('[swf-ui]', m.payload && m.payload.text); return }
+    if (m.type === 'run') {
+      uiRun((m.payload && m.payload.args) || {}, null)
+        .then(function (r) { reply(pickReply(r)); afterRun(r) })
+        .catch(fail)
+      return
+    }
+    if (m.type === 'resume') {
+      uiRun(S.runArgs, m.payload.startAt, m.payload.answer)
+        .then(function (r) { reply(pickReply(r)); afterRun(r) })
+        .catch(fail)
+      return
+    }
+    if (m.type === 'fs') {
+      post('/api/fs', {
+        swf: dash(((S.view || {}).swf || {}).id),
+        op: m.payload.op, path: m.payload.path, text: m.payload.text,
+      }).then(function (r) { r && r.ok ? reply(r) : fail(new Error((r && r.error) || '文件操作失败')) }).catch(fail)
+      return
+    }
+    if (m.type === 'dice') {
+      post('/api/dice', { n: m.payload.n, faces: m.payload.faces })
+        .then(function (r) { r && r.ok ? reply(r) : fail(new Error('掷骰失败')) }).catch(fail)
+      return
+    }
+  }
+
+  function pickReply (r) {
+    return r && r.trace
+      ? { ok: r.ok, status: r.status, steps: r.steps, pause: r.pause, screen: r.screen,
+          finalOutput: r.finalOutput, poolRounds: r.poolRounds, reason: r.reason || null }
+      : { ok: false, status: 'error', reason: (r && r.error) || '运行失败' }
+  }
+
+  function afterRun (r) {
+    postToUi('state', uiState())
+    var tr = (r && r.trace) || []
+    for (var i = 0; i < tr.length; i++) postToUi('event', { name: 'step', data: tr[i] })
+    if (r && r.status === 'paused') postToUi('event', { name: 'pause', data: r.pause })
+    else if (r && r.ok) postToUi('event', { name: 'done', data: pickReply(r) })
+    else postToUi('event', { name: 'error', data: { message: (r && r.reason) || '运行未完成', status: r && r.status } })
+  }
+
   // ── 选中的 AGT ──
   function paintAgt () {
     var a = S.agt, swf = (S.view && S.view.swf) || {}, inv = swf.invoke || {}
     var argsDef = Array.isArray(inv.args) ? inv.args : []
+    // SWF 自带界面 → 整个主区交给它。没有 ui 段才走下面那张通用表单。
+    if (screensOf().length) { paintSwfUi(); return }
     var h = '<div class="page">'
     h += '<p class="title">' + esc(a.name) + '</p>'
     // 试跑是从开发者视图进来的，得有条路回去（否则作者只能靠重新点左侧的 SWF）
@@ -1123,6 +1286,8 @@
       api('/api/view?path=' + encodeURIComponent(S.swfPath) + dirQ()).then(function (v) { S.view = v; paint() })
     }
   })
+
+  window.addEventListener('message', onUiMessage)
 
   $('#btnSettings').onclick = function () { S.panel = S.panel === 'settings' ? null : 'settings'; paint() }
 

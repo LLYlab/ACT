@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>审阅</title>
+<style>
+  body{display:flex;flex-direction:column;height:100%}
+  .wrap{flex:1;min-height:0;overflow:auto;max-width:820px;margin:0 auto;
+        padding:34px 30px 56px;width:100%}
+  .lead{font-size:22px;font-weight:660;letter-spacing:-.022em;margin:0 0 8px}
+  .say{color:var(--llmr-muted);font-size:13px;margin:0 0 26px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-family:var(--llmr-mono);font-size:10px;font-weight:600;
+        letter-spacing:.14em;text-transform:uppercase;color:var(--llmr-muted2);margin:0 0 7px}
+  .actions{display:flex;gap:10px;align-items:center;margin-top:22px}
+
+  .paper{background:linear-gradient(180deg,#0f1620,#0c1119);border:1px solid var(--llmr-line);
+        border-radius:var(--llmr-r);padding:26px 30px;white-space:pre-wrap;word-break:break-word;
+        line-height:1.78;font-size:14px;max-width:76ch}
+  .raw{display:none;margin-top:14px}
+  .raw.on{display:block}
+  .raw pre{background:var(--llmr-soft);border:1px solid var(--llmr-line2);border-radius:9px;
+        padding:14px 16px;font-size:12px;line-height:1.7;overflow:auto;max-height:420px;
+        white-space:pre-wrap;word-break:break-word;color:var(--llmr-fg2)}
+  .meta{display:flex;gap:22px;margin:0 0 20px;font-family:var(--llmr-mono)}
+  .meta b{display:block;font-size:19px;font-weight:660}
+  .meta span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--llmr-muted2)}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="lead" id="lead">变更摘要</p>
+  <p class="say">默认只给摘要。<b>源码要你自己点开看</b>——这是这张 SWF 的立场。</p>
+
+  <div class="meta">
+    <div><b id="mFiles">—</b><span>改动文件</span></div>
+    <div><b id="mRounds">0</b><span>自愈轮次</span></div>
+    <div><b id="mSteps">0</b><span>步骤</span></div>
+  </div>
+
+  <div class="paper" id="out">（还没有结果）</div>
+
+  <div class="actions">
+    <button class="llmr-btn" id="toggle">展开完整产出</button>
+    <button class="llmr-btn" id="again">再来一次</button>
+    <span class="llmr-hint" id="msg"></span>
+  </div>
+  <div class="raw" id="raw"><pre id="rawPre"></pre></div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s) }
+  $('#toggle').onclick = function () {
+    $('#raw').classList.toggle('on')
+    this.textContent = $('#raw').classList.contains('on') ? '收起' : '展开完整产出'
+  }
+  $('#again').onclick = function () { location.reload() }
+
+  llmr.ready().then(function (st) {
+    var tr = (st && st.trace) || []
+    $('#mSteps').textContent = tr.length
+    var files = 0, rounds = 0
+    for (var i = 0; i < tr.length; i++) {
+      var s = tr[i]
+      if (s.signal && typeof s.signal.file_count === 'number') files = Math.max(files, s.signal.file_count)
+      if (s.pool) rounds = Math.max(rounds, s.round || 0)
+    }
+    $('#mFiles').textContent = files || '—'
+    $('#mRounds').textContent = rounds
+    var out = (st && st.lastOutput) || ''
+    if (out) { $('#out').textContent = out; $('#rawPre').textContent = out }
+    else { $('#lead').textContent = '还没有结果'; $('#out').textContent = '先在「目标」页开始一次。' }
+    if (st && st.status === 'paused') $('#msg').textContent = '（它还停在某处等你回答）'
+  }).catch(function () {})
+})()
+</script>
+</body>
+</html>

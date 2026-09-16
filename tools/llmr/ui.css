@@ -1,0 +1,116 @@
+/* LLM R · SWF 自带界面用的主题令牌与通用件
+ *
+ * 由服务器注入（<link rel="stylesheet" href="/__llmr/ui.css">）。
+ * **页面是 SWF 的，能力是宿主的**——页面自己写 HTML/CSS/JS，
+ * 但长在这套令牌上，和主界面同一副视觉。
+ *
+ * 只有令牌和极少数通用件。真正专用的东西（代码视图、diff、叙事流）
+ * 留在页面自己手里——那是"这个工作种类"的事，不该由宿主规定。
+ */
+:root {
+  --llmr-bg: #070a10;
+  --llmr-panel: #0c1119;
+  --llmr-panel2: #111823;
+  --llmr-panel3: #161e2b;
+  --llmr-fg: #e8eef7;
+  --llmr-fg2: #a3b2c7;
+  --llmr-muted: #63748c;
+  --llmr-muted2: #4a586b;
+  --llmr-line: #1a2432;
+  --llmr-line2: #141c27;
+  --llmr-soft: #0f1620;
+  --llmr-soft2: #161f2b;
+  --llmr-accent: #4cc9f0;
+  --llmr-accent2: #7b61ff;
+  --llmr-accent3: #2ee6c5;
+  --llmr-accent-soft: rgba(76, 201, 240, .12);
+  --llmr-accent-glow: rgba(76, 201, 240, .45);
+  --llmr-danger: #ff5d6c;
+  --llmr-warn: #f5b544;
+  --llmr-ok: #38e08b;
+  --llmr-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Mono", monospace;
+  --llmr-r: 10px;
+  --llmr-r-lg: 14px;
+  --llmr-r-sm: 7px;
+}
+
+* { box-sizing: border-box }
+html, body { height: 100% }
+body {
+  margin: 0;
+  background: var(--llmr-bg);
+  color: var(--llmr-fg);
+  font: 14px/1.6 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(76, 201, 240, .28) }
+::-webkit-scrollbar { width: 10px; height: 10px }
+::-webkit-scrollbar-thumb {
+  background: #1e2836; border-radius: 6px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #2c3a4d; background-clip: content-box }
+
+a { color: var(--llmr-accent) }
+code, pre, .llmr-mono { font-family: var(--llmr-mono) }
+
+/* ── 通用件 ── */
+.llmr-btn {
+  border: 1px solid var(--llmr-line); background: var(--llmr-panel2);
+  color: var(--llmr-fg2); border-radius: 8px; padding: 7px 14px;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.llmr-btn:hover { background: var(--llmr-panel3); color: var(--llmr-fg); border-color: #243146 }
+.llmr-btn.primary {
+  background: linear-gradient(180deg, rgba(76, 201, 240, .95), rgba(58, 168, 214, .95));
+  color: #04121a; border-color: transparent; font-weight: 650;
+  box-shadow: 0 6px 22px -8px var(--llmr-accent-glow);
+}
+.llmr-btn.primary:hover { filter: brightness(1.09) }
+.llmr-btn:disabled { opacity: .4; cursor: default }
+
+.llmr-card {
+  background: var(--llmr-panel); border: 1px solid var(--llmr-line);
+  border-radius: var(--llmr-r); padding: 20px 22px;
+}
+.llmr-pill {
+  display: inline-block; padding: 2px 10px; border-radius: 6px;
+  background: var(--llmr-soft); border: 1px solid var(--llmr-line2);
+  color: var(--llmr-fg2); font-size: 11.5px; font-family: var(--llmr-mono);
+  margin: 0 6px 6px 0;
+}
+.llmr-pill.on { background: var(--llmr-accent-soft); color: var(--llmr-accent); border-color: rgba(76, 201, 240, .24) }
+
+.llmr-h2 {
+  font-family: var(--llmr-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--llmr-muted2);
+  margin: 26px 0 10px; display: flex; align-items: center; gap: 9px;
+}
+.llmr-h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--llmr-line), transparent) }
+
+.llmr-input, input[type=text], input[type=password], textarea, select {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--llmr-line);
+  border-radius: 9px; background: var(--llmr-soft); outline: none;
+  color: var(--llmr-fg); font: inherit; font-size: 13.5px;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.llmr-input:focus, input:focus, textarea:focus, select:focus {
+  border-color: rgba(76, 201, 240, .55); box-shadow: 0 0 0 3px rgba(76, 201, 240, .09);
+}
+textarea { min-height: 64px; font-family: var(--llmr-mono); font-size: 12.5px; resize: vertical }
+
+.llmr-hint { color: var(--llmr-muted); font-size: 12.5px }
+.llmr-err { color: var(--llmr-danger) }
+.llmr-warn { color: var(--llmr-warn) }
+.llmr-ok { color: var(--llmr-ok) }
+
+.llmr-empty { color: var(--llmr-muted); text-align: center; padding: 60px 20px; line-height: 1.9 }
+
+/* 页面骨架：左主右栏，或上下 */
+.llmr-page { max-width: 960px; margin: 0 auto; padding: 28px 30px 64px }
+.llmr-row { display: flex; gap: 14px; align-items: center }
+.llmr-grow { flex: 1; min-width: 0 }
+.llmr-split { display: flex; gap: 16px; align-items: flex-start }
+.llmr-split > .llmr-main { flex: 1; min-width: 0 }
+.llmr-split > .llmr-side { width: 280px; flex: none }
